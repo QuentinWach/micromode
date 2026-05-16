@@ -307,12 +307,6 @@ fn solve_tensorial_sparse_py(
 }
 
 #[cfg(feature = "python")]
-#[pyfunction]
-fn has_umfpack_backend_py() -> bool {
-    cfg!(feature = "umfpack-backend")
-}
-
-#[cfg(feature = "python")]
 fn cell_areas_from_steps(dlf_x: &[f64], dlf_y: &[f64]) -> Vec<f64> {
     // Python supplies mode-plane edges; by this point they have become cell
     // widths. Flatten in the same x-major/y-minor order used by material tensors.
@@ -373,6 +367,5 @@ fn sparse_derivative_matrices_for_solve(
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(solve_diagonal_sparse_py, m)?)?;
     m.add_function(wrap_pyfunction!(solve_tensorial_sparse_py, m)?)?;
-    m.add_function(wrap_pyfunction!(has_umfpack_backend_py, m)?)?;
     Ok(())
 }

@@ -40,21 +40,6 @@ pub fn selected_sparse_shift_invert_eigenpairs(
     initial_vector: Option<&[Complex64]>,
     options: ShiftInvertOptions,
 ) -> Result<Vec<Eigenpair>, String> {
-    // Prefer packaged sparse backends first. If an optional backend cannot
-    // handle this matrix, fall through to the next available implementation.
-    #[cfg(feature = "umfpack-backend")]
-    {
-        if let Ok(pairs) = selected_sparse_shift_invert_native_umfpack_eigenpairs(
-            mat,
-            num_modes,
-            guess_value,
-            initial_vector,
-            options.clone(),
-        ) {
-            return Ok(pairs);
-        }
-    }
-
     selected_sparse_shift_invert_native_eigenpairs(
         mat,
         num_modes,
@@ -94,33 +79,6 @@ pub fn selected_sparse_shift_invert_native_eigenpairs(
         initial_vector,
         options,
         "native_shift_invert",
-        |input| factorization.solve(input),
-    )
-}
-
-#[cfg(feature = "umfpack-backend")]
-pub fn selected_sparse_shift_invert_native_umfpack_eigenpairs(
-    mat: &SparseMatrix,
-    num_modes: usize,
-    guess_value: Complex64,
-    initial_vector: Option<&[Complex64]>,
-    options: ShiftInvertOptions,
-) -> Result<Vec<Eigenpair>, String> {
-    if mat.rows != mat.cols {
-        return Err("eigenvalue matrix must be square".to_string());
-    }
-    if num_modes == 0 {
-        return Err("num_modes must be positive".to_string());
-    }
-    let shifted = mat.shifted_diagonal(guess_value);
-    let mut factorization = UmfpackLu::factor(&shifted)?;
-    selected_sparse_shift_invert_native_with_solver(
-        mat,
-        num_modes,
-        guess_value,
-        initial_vector,
-        options,
-        "native_umfpack_shift_invert",
         |input| factorization.solve(input),
     )
 }
@@ -219,65 +177,6 @@ where
             backend,
         })
         .collect())
-}
-
-#[cfg(feature = "umfpack-backend")]
-struct UmfpackLu {
-    n: usize,
-    solver: russell_sparse::prelude::ComplexSolverUMFPACK,
-}
-
-#[cfg(feature = "umfpack-backend")]
-impl UmfpackLu {
-    fn factor(matrix: &SparseMatrix) -> Result<Self, String> {
-        use russell_sparse::prelude::{ComplexCooMatrix, ComplexLinSolTrait, LinSolParams, Sym};
-
-        if matrix.rows != matrix.cols {
-            return Err("LU factorization requires a square matrix".to_string());
-        }
-        let mut coo = ComplexCooMatrix::new(matrix.rows, matrix.cols, matrix.nnz(), Sym::No)
-            .map_err(|err| err.to_string())?;
-        for col in 0..matrix.cols {
-            for (row, value) in matrix.column_entries(col) {
-                coo.put(row, col, russell_complex(value))
-                    .map_err(|err| err.to_string())?;
-            }
-        }
-        let mut solver =
-            russell_sparse::prelude::ComplexSolverUMFPACK::new().map_err(|err| err.to_string())?;
-        solver
-            .factorize(&coo, Some(LinSolParams::new()))
-            .map_err(|err| err.to_string())?;
-        Ok(Self {
-            n: matrix.rows,
-            solver,
-        })
-    }
-
-    fn solve(&mut self, rhs: &[Complex64]) -> Result<Vec<Complex64>, String> {
-        use russell_sparse::prelude::ComplexLinSolTrait;
-
-        if rhs.len() != self.n {
-            return Err("right-hand side length does not match LU size".to_string());
-        }
-        let rhs_values = rhs.iter().copied().map(russell_complex).collect::<Vec<_>>();
-        let rhs = russell_lab::ComplexVector::from(&rhs_values);
-        let mut x = russell_lab::ComplexVector::new(self.n);
-        self.solver
-            .solve(&mut x, &rhs, false)
-            .map_err(|err| err.to_string())?;
-        Ok(x.as_data().iter().copied().map(num_complex).collect())
-    }
-}
-
-#[cfg(feature = "umfpack-backend")]
-fn russell_complex(value: Complex64) -> russell_lab::Complex64 {
-    russell_lab::Complex64::new(value.re, value.im)
-}
-
-#[cfg(feature = "umfpack-backend")]
-fn num_complex(value: russell_lab::Complex64) -> Complex64 {
-    Complex64::new(value.re, value.im)
 }
 
 #[derive(Clone, Debug)]

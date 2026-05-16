@@ -3,8 +3,7 @@ use std::time::{Duration, Instant};
 
 use micromode_core::derivatives::{self, Tensor3};
 use micromode_core::eigensolve::{
-    selected_sparse_shift_invert_native_eigenpairs,
-    selected_sparse_shift_invert_native_umfpack_eigenpairs, Eigenpair, ShiftInvertOptions,
+    selected_sparse_shift_invert_native_eigenpairs, Eigenpair, ShiftInvertOptions,
 };
 use micromode_core::operators::assemble_sparse_diagonal_operators;
 use num_complex::Complex64;
@@ -16,9 +15,7 @@ fn main() -> Result<(), String> {
     let num_modes = parse_usize_arg("--num-modes").unwrap_or(2);
     let target_neff = parse_f64_arg("--target-neff").unwrap_or(2.5);
 
-    println!(
-        "backend,grid,operator_size,operator_nnz,repeats,best_ms,mean_ms,max_residual,max_abs_eigen_delta"
-    );
+    println!("backend,grid,operator_size,operator_nnz,repeats,best_ms,mean_ms,max_residual");
     for (nx, ny) in grids {
         let (mat, guess) = strip_operator(nx, ny, target_neff);
         let options = ShiftInvertOptions {
@@ -35,28 +32,8 @@ fn main() -> Result<(), String> {
                 options.clone(),
             )
         })?;
-        let native_umfpack = benchmark_backend(repeats, || {
-            selected_sparse_shift_invert_native_umfpack_eigenpairs(
-                &mat,
-                num_modes,
-                guess,
-                None,
-                options.clone(),
-            )
-        })?;
-        let native_umfpack_eigen_delta = max_abs_eigen_delta(&native.pairs, &native_umfpack.pairs);
 
-        print_row("native", nx, ny, mat.rows, mat.nnz(), repeats, &native, 0.0);
-        print_row(
-            "native_umfpack",
-            nx,
-            ny,
-            mat.rows,
-            mat.nnz(),
-            repeats,
-            &native_umfpack,
-            native_umfpack_eigen_delta,
-        );
+        print_row("native", nx, ny, mat.rows, mat.nnz(), repeats, &native);
     }
     Ok(())
 }
@@ -92,7 +69,6 @@ fn print_row(
     operator_nnz: usize,
     repeats: usize,
     result: &BenchResult,
-    eigen_delta: f64,
 ) {
     let best = result.durations.iter().min().copied().unwrap_or_default();
     let mean = result
@@ -107,11 +83,10 @@ fn print_row(
         .map(|pair| pair.residual)
         .fold(0.0, f64::max);
     println!(
-        "{backend},{nx}x{ny},{operator_size},{operator_nnz},{repeats},{:.3},{:.3},{:.3e},{:.3e}",
+        "{backend},{nx}x{ny},{operator_size},{operator_nnz},{repeats},{:.3},{:.3},{:.3e}",
         best.as_secs_f64() * 1000.0,
         mean * 1000.0,
         max_residual,
-        eigen_delta,
     );
 }
 
@@ -170,13 +145,6 @@ fn uniform_tensor(n: usize, diagonal: f64) -> Tensor3 {
         tensor[component][component] = vec![Complex64::new(diagonal, 0.0); n];
     }
     tensor
-}
-
-fn max_abs_eigen_delta(left: &[Eigenpair], right: &[Eigenpair]) -> f64 {
-    left.iter()
-        .zip(right)
-        .map(|(left, right)| (left.value - right.value).norm())
-        .fold(0.0, f64::max)
 }
 
 fn linspace(start: f64, stop: f64, len: usize) -> Vec<f64> {

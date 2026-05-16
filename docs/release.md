@@ -72,6 +72,5 @@ checks metadata, and publishes to PyPI using Trusted Publishing.
 ## Current Wheel Scope
 
 The release workflow builds macOS and Linux wheels for Python 3.10 through
-3.13. Windows wheels are intentionally not enabled yet because the sparse
-backend depends on ARPACK/SuiteSparse-style native libraries. Add Windows only
-after that native dependency story is reliable.
+3.13. Windows wheels are intentionally not enabled yet; add Windows once the
+portable backend has release coverage on that target.

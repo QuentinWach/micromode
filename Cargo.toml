@@ -8,7 +8,6 @@ repository = "https://github.com/QuentinWach/micromode"
 readme = "README.md"
 keywords = ["fdfd", "mode-solver", "photonics", "waveguide"]
 categories = ["science"]
-build = "build.rs"
 
 [lib]
 name = "micromode_core"
@@ -17,7 +16,6 @@ crate-type = ["cdylib", "rlib"]
 [[bin]]
 name = "eigensolver-backend-benchmark"
 path = "benchmarks/eigensolver_backend_benchmark.rs"
-required-features = ["umfpack-backend"]
 
 [dependencies]
 amd = "0.2"
@@ -25,11 +23,8 @@ nalgebra = "0.33"
 num-complex = "0.4"
 pyo3 = { version = "0.23.5", optional = true }
 rlu = "0.7"
-russell_lab = { version = "1.15.0", optional = true }
-russell_sparse = { version = "1.15.0", optional = true }
 
 [features]
 default = []
-umfpack-backend = ["dep:russell_lab", "dep:russell_sparse"]
 python = ["pyo3"]
 extension-module = ["python", "pyo3/extension-module"]
