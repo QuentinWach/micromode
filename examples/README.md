@@ -34,8 +34,8 @@ Run the SOI hybridization sweep:
 uv run --extra dev python examples/soi_hybridization_sweep.py
 ```
 
-That example sweeps a 220 nm fully etched SOI ridge width, tracks modal branches by field overlap,
-and writes the effective-index and TE/TM fraction plots to
+That example sweeps a 220 nm fully etched SOI ridge width and writes the
+effective-index and TE-fraction plots to
 `examples/soi_hybridization_outputs/`.
 
 Run the README ridge-waveguide example:
@@ -44,5 +44,6 @@ Run the README ridge-waveguide example:
 uv run --extra dev python examples/ridge_waveguide_readme.py
 ```
 
-That example rasterizes a 500 nm film, 400 nm ridge, 500 nm width waveguide
-with angled sidewalls and writes plots to `examples/ridge_waveguide_outputs/`.
+That example rasterizes a 220 nm SOI rib waveguide with a 90 nm slab, 500 nm
+top ridge width, inverted angled sidewalls, and subpixel material averaging.
+It writes publication-style plots to `examples/ridge_waveguide_outputs/`.
