@@ -1,0 +1,681 @@
+{
+  "case": {
+    "case_id": "sort_n_eff_ascending",
+    "description": "Mode sorting by ascending effective index.",
+    "requires": [],
+    "suite": "extended",
+    "tags": [
+      "axis:y",
+      "sort:n_eff",
+      "single"
+    ],
+    "tolerances": {
+      "field_rel": 0.0002,
+      "n_complex_atol": 2e-06
+    }
+  },
+  "environment": {
+    "numpy": "2.4.4",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 123.93267059326172,
+            "max_abs": 13.522195816040039,
+            "nonzero": 315
+          },
+          {
+            "l2": 283.8252868652344,
+            "max_abs": 30.967864990234375,
+            "nonzero": 319
+          },
+          {
+            "l2": 20.581382751464844,
+            "max_abs": 2.2459940910339355,
+            "nonzero": 317
+          },
+          {
+            "l2": 282.6753234863281,
+            "max_abs": 22.277996063232422,
+            "nonzero": 307
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 101.47103881835938,
+            "max_abs": 11.445982933044434,
+            "nonzero": 305
+          },
+          {
+            "l2": 57.9530029296875,
+            "max_abs": 6.604276657104492,
+            "nonzero": 301
+          },
+          {
+            "l2": 152.08229064941406,
+            "max_abs": 17.331375122070312,
+            "nonzero": 302
+          },
+          {
+            "l2": 0.00208495301194489,
+            "max_abs": 0.00025558899505995214,
+            "nonzero": 291
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 330.2722473144531,
+            "max_abs": 34.84878158569336,
+            "nonzero": 317
+          },
+          {
+            "l2": 60.235618591308594,
+            "max_abs": 6.421133518218994,
+            "nonzero": 314
+          },
+          {
+            "l2": 298.635986328125,
+            "max_abs": 31.83466911315918,
+            "nonzero": 311
+          },
+          {
+            "l2": 0.004139169119298458,
+            "max_abs": 0.0004612798220477998,
+            "nonzero": 316
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 1.060839056968689,
+            "max_abs": 0.11193529516458511,
+            "nonzero": 318
+          },
+          {
+            "l2": 0.09076215326786041,
+            "max_abs": 0.009675310924649239,
+            "nonzero": 316
+          },
+          {
+            "l2": 1.225701093673706,
+            "max_abs": 0.13065995275974274,
+            "nonzero": 311
+          },
+          {
+            "l2": 1.6322255760314874e-05,
+            "max_abs": 1.8313105556444498e-06,
+            "nonzero": 318
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.9188231825828552,
+            "max_abs": 0.0937771201133728,
+            "nonzero": 330
+          },
+          {
+            "l2": 0.5655609965324402,
+            "max_abs": 0.0577222965657711,
+            "nonzero": 328
+          },
+          {
+            "l2": 0.28340810537338257,
+            "max_abs": 0.028925808146595955,
+            "nonzero": 333
+          },
+          {
+            "l2": 0.49903804063796997,
+            "max_abs": 0.03678986057639122,
+            "nonzero": 329
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 25,
+          "max": 1.0909090909090895,
+          "min": -1.0909090909090908
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 15,
+          "max": 0.6176470588235294,
+          "min": -0.6176470588235294
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex64",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.11577925831079483,
+            "max_abs": 0.012632884085178375,
+            "nonzero": 319
+          },
+          {
+            "l2": 0.9717943668365479,
+            "max_abs": 0.10603169351816177,
+            "nonzero": 321
+          },
+          {
+            "l2": 0.2287999540567398,
+            "max_abs": 0.02496553771197796,
+            "nonzero": 313
+          },
+          {
+            "l2": 0.9514890313148499,
+            "max_abs": 0.07498832046985626,
+            "nonzero": 299
+          }
+        ]
+      ],
+      "shape": [
+        25,
+        1,
+        15,
+        1,
+        4
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T07:36:15+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      193414489032258.06
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 4,
+      "num_pml": [
+        0,
+        0
+      ],
+      "precision": "single",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "ascending",
+        "sort_reference": null,
+        "track_freq": null,
+        "type": "mode_sort_spec"
+      },
+      "target_neff": 3.48,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      2.0,
+      0.0,
+      1.1
+    ],
+    "store_fields_direction": "-",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          1,
+          4
+        ],
+        "values": [
+          [
+            1.370850415641643,
+            1.2158778330980322,
+            1.2893992636678397,
+            1.6350617737525663
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 4,
+          "max": 3.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "real": [
+          [
+            1.0057294368743896,
+            1.207535982131958,
+            1.2075419425964355,
+            1.2680926322937012
+          ]
+        ],
+        "shape": [
+          1,
+          4
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 193414489032258.06,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 4,
+            "max": 3.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            4
+          ],
+          "values": [
+            [
+              0.1577326884706922,
+              0.9672435358683715,
+              0.006277318885614487,
+              0.9999999998457614
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 193414489032258.06,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 4,
+            "max": 3.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            4
+          ],
+          "values": [
+            [
+              0.8422673115293078,
+              0.03275646413162847,
+              0.9937226811143856,
+              1.5423862187446957e-10
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      193414489032258.06
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": null
+}

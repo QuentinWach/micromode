@@ -1,0 +1,711 @@
+{
+  "case": {
+    "case_id": "strip_x_lossy_double",
+    "description": "X-propagating lossy dielectric strip with complex effective indices.",
+    "requires": [],
+    "suite": "smoke",
+    "tags": [
+      "axis:x",
+      "lossy",
+      "double",
+      "multi_freq"
+    ],
+    "tolerances": {
+      "field_rel": 5e-06,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal",
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 80.30029743969351,
+            "max_abs": 8.760270146333808,
+            "nonzero": 798
+          },
+          {
+            "l2": 102.37816665215296,
+            "max_abs": 11.381209237889498,
+            "nonzero": 794
+          }
+        ],
+        [
+          {
+            "l2": 83.04899292213096,
+            "max_abs": 8.995081346695546,
+            "nonzero": 797
+          },
+          {
+            "l2": 105.76226292565241,
+            "max_abs": 11.669351297766775,
+            "nonzero": 805
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 266.4630306255196,
+            "max_abs": 30.371663715787825,
+            "nonzero": 840
+          },
+          {
+            "l2": 11.068753746004946,
+            "max_abs": 1.6224813703823797,
+            "nonzero": 843
+          }
+        ],
+        [
+          {
+            "l2": 266.1369311702236,
+            "max_abs": 30.150705867269693,
+            "nonzero": 842
+          },
+          {
+            "l2": 11.799034504657229,
+            "max_abs": 1.7606435055322043,
+            "nonzero": 843
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 7.487053178256916,
+            "max_abs": 1.3704258609771298,
+            "nonzero": 854
+          },
+          {
+            "l2": 263.470019068332,
+            "max_abs": 30.25394012112015,
+            "nonzero": 855
+          }
+        ],
+        [
+          {
+            "l2": 8.014363401664033,
+            "max_abs": 1.481458243669431,
+            "nonzero": 850
+          },
+          {
+            "l2": 263.1164041007476,
+            "max_abs": 29.997123257847935,
+            "nonzero": 850
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.3657120857977229,
+            "max_abs": 0.04296292669150782,
+            "nonzero": 899
+          },
+          {
+            "l2": 0.31116875814236955,
+            "max_abs": 0.03668112920129891,
+            "nonzero": 899
+          }
+        ],
+        [
+          {
+            "l2": 0.3732115575238944,
+            "max_abs": 0.04360958250816018,
+            "nonzero": 899
+          },
+          {
+            "l2": 0.3187128756736037,
+            "max_abs": 0.0373550248336708,
+            "nonzero": 899
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.07538568239571963,
+            "max_abs": 0.009158392805640476,
+            "nonzero": 851
+          },
+          {
+            "l2": 1.4205778920530598,
+            "max_abs": 0.1671691123094324,
+            "nonzero": 850
+          }
+        ],
+        [
+          {
+            "l2": 0.07912811694368775,
+            "max_abs": 0.009553131798478803,
+            "nonzero": 851
+          },
+          {
+            "l2": 1.4192752200389285,
+            "max_abs": 0.1662436889992298,
+            "nonzero": 852
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        },
+        "z": {
+          "len": 29,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 1.3947607445404762,
+            "max_abs": 0.16085610314111543,
+            "nonzero": 847
+          },
+          {
+            "l2": 0.06479306924751978,
+            "max_abs": 0.008799470331002243,
+            "nonzero": 845
+          }
+        ],
+        [
+          {
+            "l2": 1.3920852601659262,
+            "max_abs": 0.15976883852558643,
+            "nonzero": 841
+          },
+          {
+            "l2": 0.06808281292669843,
+            "max_abs": 0.009176650639278777,
+            "nonzero": 848
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        31,
+        29,
+        2,
+        2
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:26:26+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      199861638666666.66,
+      193414489032258.06
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 2,
+      "num_pml": [
+        0,
+        0
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": 2.0,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      0.0,
+      3.0,
+      3.0
+    ],
+    "store_fields_direction": "-",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          2,
+          2
+        ],
+        "values": [
+          [
+            0.8977771453570909,
+            0.9589736475471685
+          ],
+          [
+            0.9193710245334455,
+            0.9883813316569168
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 2,
+          "max": 199861638666666.66,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            0.002367656043230085,
+            0.002389657491326852
+          ],
+          [
+            0.0024513013031578104,
+            0.0024748082627729473
+          ]
+        ],
+        "real": [
+          [
+            1.825573675659733,
+            1.8017232760230641
+          ],
+          [
+            1.8149871622460614,
+            1.7891186061771311
+          ]
+        ],
+        "shape": [
+          2,
+          2
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 2,
+            "max": 199861638666666.66,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              0.9991225351669583,
+              0.0019154574207816606
+            ],
+            [
+              0.9989869318409658,
+              0.002192330661480395
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 2,
+            "max": 199861638666666.66,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            [
+              0.0008774648330417412,
+              0.9980845425792183
+            ],
+            [
+              0.001013068159034236,
+              0.9978076693385196
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      199861638666666.66,
+      193414489032258.06
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    0.03846153846153777,
+    0.0,
+    0.0
+  ]
+}

@@ -1,0 +1,616 @@
+{
+  "case": {
+    "case_id": "simulation_2d_te",
+    "description": "2D simulation mode solve with TE filtering and asymmetric PML count.",
+    "requires": [],
+    "suite": "extended",
+    "tags": [
+      "2d",
+      "axis:y",
+      "filter:te",
+      "num_pml"
+    ],
+    "tolerances": {
+      "field_rel": 1e-05,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 89.96155378417113,
+            "max_abs": 26.605540660688128,
+            "nonzero": 42
+          },
+          {
+            "l2": 1.3879802685277435e-13,
+            "max_abs": 3.822954128346465e-14,
+            "nonzero": 41
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 2.9336257210723734e-14,
+            "max_abs": 1.23523096631728e-14,
+            "nonzero": 41
+          },
+          {
+            "l2": 24.007269122248562,
+            "max_abs": 6.997075603222775,
+            "nonzero": 41
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 4.615349010802729e-14,
+            "max_abs": 1.552422357891527e-14,
+            "nonzero": 43
+          },
+          {
+            "l2": 87.8794320521367,
+            "max_abs": 27.418528085126496,
+            "nonzero": 43
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 2.3587984175286927e-16,
+            "max_abs": 8.446578235218148e-17,
+            "nonzero": 43
+          },
+          {
+            "l2": 0.47836865092325165,
+            "max_abs": 0.15019973918005036,
+            "nonzero": 43
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.09476305775396016,
+            "max_abs": 0.02917795130919431,
+            "nonzero": 43
+          },
+          {
+            "l2": 1.462467075114399e-16,
+            "max_abs": 5.750325744816713e-17,
+            "nonzero": 43
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 43,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.4659988925147815,
+            "max_abs": 0.13781612212237218,
+            "nonzero": 41
+          },
+          {
+            "l2": 7.497830881801383e-16,
+            "max_abs": 2.772274189455334e-16,
+            "nonzero": 41
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        1,
+        43,
+        1,
+        2
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:26:27+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": "te",
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 2,
+      "num_pml": [
+        0,
+        8
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": null,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      5.0,
+      0.0,
+      5.0
+    ],
+    "store_fields_direction": "-",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          1,
+          2
+        ],
+        "values": [
+          [
+            0.7651594570669445,
+            0.7697473892674573
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            -3.856934181628666e-09,
+            2.7209675859845843e-09
+          ]
+        ],
+        "real": [
+          [
+            1.9514548333244697,
+            1.938225854198567
+          ]
+        ],
+        "shape": [
+          1,
+          2
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 299792458000000.0,
+            "min": 299792458000000.0
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              1.0,
+              2.577430273467705e-30
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 299792458000000.0,
+            "min": 299792458000000.0
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "-",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    0.0,
+    -0.024999999999999356,
+    0.0
+  ]
+}

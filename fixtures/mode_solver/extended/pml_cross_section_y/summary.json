@@ -1,0 +1,615 @@
+{
+  "case": {
+    "case_id": "pml_cross_section_y",
+    "description": "Y-propagating strip with PML padding in the mode cross-section.",
+    "requires": [],
+    "suite": "extended",
+    "tags": [
+      "axis:y",
+      "num_pml",
+      "pml"
+    ],
+    "tolerances": {
+      "field_rel": 1e-05,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 348.87864123979614,
+            "max_abs": 29.766506646379636,
+            "nonzero": 1557
+          },
+          {
+            "l2": 9.792600418729064,
+            "max_abs": 0.9918273618720027,
+            "nonzero": 1570
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 72.75574106492391,
+            "max_abs": 5.977881841923665,
+            "nonzero": 1556
+          },
+          {
+            "l2": 107.46291592230207,
+            "max_abs": 9.129875570183799,
+            "nonzero": 1557
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 5.233508429331311,
+            "max_abs": 0.7974881765842158,
+            "nonzero": 1627
+          },
+          {
+            "l2": 343.9917611347624,
+            "max_abs": 29.88850544555348,
+            "nonzero": 1627
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.06355165150388843,
+            "max_abs": 0.005952328341464584,
+            "nonzero": 1628
+          },
+          {
+            "l2": 1.859072740805571,
+            "max_abs": 0.16348291345019883,
+            "nonzero": 1628
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.4138868786389195,
+            "max_abs": 0.036914253521769275,
+            "nonzero": 1628
+          },
+          {
+            "l2": 0.3099299082175149,
+            "max_abs": 0.027498777112741485,
+            "nonzero": 1628
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 45,
+          "max": 1.759999999999999,
+          "min": -1.76
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 37,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 1.8236779785909283,
+            "max_abs": 0.1562139563247272,
+            "nonzero": 1559
+          },
+          {
+            "l2": 0.04883436558920492,
+            "max_abs": 0.005629521256850823,
+            "nonzero": 1563
+          }
+        ]
+      ],
+      "shape": [
+        45,
+        1,
+        37,
+        1,
+        2
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:26:28+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      249827048333333.34
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 2,
+      "num_pml": [
+        6,
+        6
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": null,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      3.5,
+      0.0,
+      2.8
+    ],
+    "store_fields_direction": "+",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          1,
+          2
+        ],
+        "values": [
+          [
+            0.8640605506941591,
+            0.9011720782645467
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 249827048333333.34,
+          "min": 249827048333333.34
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            -9.103484405751952e-09,
+            1.334555048816096e-10
+          ]
+        ],
+        "real": [
+          [
+            1.893770092537582,
+            1.8755481058767969
+          ]
+        ],
+        "shape": [
+          1,
+          2
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 249827048333333.34,
+            "min": 249827048333333.34
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              0.9997518088747207,
+              0.0008648090369701444
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 249827048333333.34,
+            "min": 249827048333333.34
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              0.00024819112527929565,
+              0.9991351909630298
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      249827048333333.34
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    -4.440892098500626e-16,
+    -0.02999999999999914,
+    0.0
+  ]
+}

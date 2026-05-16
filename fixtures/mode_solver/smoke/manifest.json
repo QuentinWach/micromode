@@ -1,0 +1,446 @@
+{
+  "case_count": 5,
+  "cases": [
+    {
+      "case_id": "strip_y_scalar_double_3freq",
+      "description": "Y-propagating dielectric strip, double precision, 3 modes across 3 frequencies.",
+      "files": {
+        "mode_data": "strip_y_scalar_double_3freq/mode_data.hdf5",
+        "summary": "strip_y_scalar_double_3freq/summary.json"
+      },
+      "requires": [],
+      "sha256": {
+        "mode_data": "bb35df597a8f7e9312466149c1dba4f56ba9872245cb57d0849bd2fda6d8711c",
+        "summary": "7585acad6bf5580d2240106495cb6c57ce9054b7a5d85b6a55e400fecf75970e"
+      },
+      "suite": "smoke",
+      "tags": [
+        "axis:y",
+        "scalar",
+        "double",
+        "multi_freq",
+        "symmetry",
+        "sort:track_freq"
+      ],
+      "tolerances": {
+        "field_rel": 2e-06,
+        "n_complex_atol": 2e-08
+      }
+    },
+    {
+      "case_id": "strip_z_scalar_single",
+      "description": "Z-propagating dielectric strip, single precision, 2 modes.",
+      "files": {
+        "mode_data": "strip_z_scalar_single/mode_data.hdf5",
+        "summary": "strip_z_scalar_single/summary.json"
+      },
+      "requires": [],
+      "sha256": {
+        "mode_data": "6ac27ce37cddfce0198cb84c9cc3d2132b52c716d8d98a5e6a8e4d7d513d1d32",
+        "summary": "819a7c06c69487c20fbda94236f7681eaf0063c1274ffe34c103508188028538"
+      },
+      "suite": "smoke",
+      "tags": [
+        "axis:z",
+        "scalar",
+        "single"
+      ],
+      "tolerances": {
+        "field_rel": 0.0002,
+        "n_complex_atol": 2e-06
+      }
+    },
+    {
+      "case_id": "strip_x_lossy_double",
+      "description": "X-propagating lossy dielectric strip with complex effective indices.",
+      "files": {
+        "mode_data": "strip_x_lossy_double/mode_data.hdf5",
+        "summary": "strip_x_lossy_double/summary.json"
+      },
+      "requires": [],
+      "sha256": {
+        "mode_data": "749a86181f7c86006501e307f150fa8f787f2dd5c1d14861e16af4cce98fe943",
+        "summary": "f2647510fd5e023463f2c67e0e84b94ea8eb0e4b945e88c50c3fdf8179b94837"
+      },
+      "suite": "smoke",
+      "tags": [
+        "axis:x",
+        "lossy",
+        "double",
+        "multi_freq"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "group_index_silicon_strip",
+      "description": "Silicon strip with group index and dispersion calculation enabled.",
+      "files": {
+        "mode_data": "group_index_silicon_strip/mode_data.hdf5",
+        "summary": "group_index_silicon_strip/summary.json"
+      },
+      "requires": [],
+      "sha256": {
+        "mode_data": "1db2109a70e4126735676fbe1b27cfe26e3517a001f578d418f5fc7737fad6d4",
+        "summary": "498e8486be4994da9fbe1a871adc967a4957ee108f871596eb742860039005e3"
+      },
+      "suite": "smoke",
+      "tags": [
+        "axis:z",
+        "group_index",
+        "dispersion",
+        "target_neff"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08,
+        "n_group_atol": 5e-05
+      }
+    },
+    {
+      "case_id": "pec_parallel_plate_y",
+      "description": "Y-propagating air guide bounded by PEC walls with non-colocated output.",
+      "files": {
+        "mode_data": "pec_parallel_plate_y/mode_data.hdf5",
+        "summary": "pec_parallel_plate_y/summary.json"
+      },
+      "requires": [],
+      "sha256": {
+        "mode_data": "314e05010ee46b99499fc518033630271680abcf15609af5a7b4928c5815c6be",
+        "summary": "199846372e4b0f24c6fb3b58dd6dbd316f9df77dcdd87f09d501fc065172514e"
+      },
+      "suite": "smoke",
+      "tags": [
+        "axis:y",
+        "pec",
+        "colocate:false",
+        "uniform_grid",
+        "outside_80_target",
+        "boundary_condition"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08
+      }
+    }
+  ],
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "fixture_root": "fixtures/mode_solver/smoke",
+  "generated_at": "2026-05-14T05:22:52+00:00",
+  "registered_cases": [
+    {
+      "case_id": "strip_y_scalar_double_3freq",
+      "description": "Y-propagating dielectric strip, double precision, 3 modes across 3 frequencies.",
+      "requires": [],
+      "suite": "smoke",
+      "tags": [
+        "axis:y",
+        "scalar",
+        "double",
+        "multi_freq",
+        "symmetry",
+        "sort:track_freq"
+      ],
+      "tolerances": {
+        "field_rel": 2e-06,
+        "n_complex_atol": 2e-08
+      }
+    },
+    {
+      "case_id": "strip_z_scalar_single",
+      "description": "Z-propagating dielectric strip, single precision, 2 modes.",
+      "requires": [],
+      "suite": "smoke",
+      "tags": [
+        "axis:z",
+        "scalar",
+        "single"
+      ],
+      "tolerances": {
+        "field_rel": 0.0002,
+        "n_complex_atol": 2e-06
+      }
+    },
+    {
+      "case_id": "strip_x_lossy_double",
+      "description": "X-propagating lossy dielectric strip with complex effective indices.",
+      "requires": [],
+      "suite": "smoke",
+      "tags": [
+        "axis:x",
+        "lossy",
+        "double",
+        "multi_freq"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "group_index_silicon_strip",
+      "description": "Silicon strip with group index and dispersion calculation enabled.",
+      "requires": [],
+      "suite": "smoke",
+      "tags": [
+        "axis:z",
+        "group_index",
+        "dispersion",
+        "target_neff"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08,
+        "n_group_atol": 5e-05
+      }
+    },
+    {
+      "case_id": "pec_parallel_plate_y",
+      "description": "Y-propagating air guide bounded by PEC walls with non-colocated output.",
+      "requires": [],
+      "suite": "smoke",
+      "tags": [
+        "axis:y",
+        "pec",
+        "colocate:false",
+        "uniform_grid",
+        "outside_80_target",
+        "boundary_condition"
+      ],
+      "tolerances": {
+        "field_rel": 5e-06,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "simulation_2d_te",
+      "description": "2D simulation mode solve with TE filtering and asymmetric PML count.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "2d",
+        "axis:y",
+        "filter:te",
+        "num_pml"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "pml_cross_section_y",
+      "description": "Y-propagating strip with PML padding in the mode cross-section.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:y",
+        "num_pml",
+        "pml"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "bend_y_radius",
+      "description": "Bent Y-propagating strip using bend_radius and bend_axis.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:y",
+        "bend",
+        "curvilinear"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "partial_fields_subset",
+      "description": "Solver output restricted to a subset of field components.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:y",
+        "fields:subset"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "sort_n_eff_ascending",
+      "description": "Mode sorting by ascending effective index.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:y",
+        "sort:n_eff",
+        "single"
+      ],
+      "tolerances": {
+        "field_rel": 0.0002,
+        "n_complex_atol": 2e-06
+      }
+    },
+    {
+      "case_id": "custom_cartesian_left",
+      "description": "Custom Cartesian medium sampled at the low-index side of a waveguide.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:x",
+        "custom_medium",
+        "cartesian",
+        "nearest"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "custom_cartesian_right",
+      "description": "Custom Cartesian medium sampled at the high-index side of a waveguide.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:x",
+        "custom_medium",
+        "cartesian",
+        "nearest"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "polyslab_sloped_sidewall",
+      "description": "Z-propagating trapezoidal dielectric waveguide with sloped sidewalls.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "geometry:polyslab",
+        "sloped",
+        "outside_80_target",
+        "rasterization"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "cylindrical_rod_air",
+      "description": "Circular high-index dielectric rod in air.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "geometry:cylinder",
+        "circular",
+        "outside_80_target",
+        "rasterization"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "slot_waveguide_silicon",
+      "description": "Silicon slot waveguide with two rails separated by a low-index slot.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "geometry:slot",
+        "multi_structure",
+        "dielectric"
+      ],
+      "tolerances": {
+        "field_rel": 2e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "rib_waveguide_silicon",
+      "description": "Silicon rib waveguide with shallow slab and raised ridge.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "geometry:rib",
+        "multi_structure",
+        "dielectric"
+      ],
+      "tolerances": {
+        "field_rel": 2e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "interp_cubic_strip",
+      "description": "Cubic interpolation over a multi-frequency strip-waveguide sweep.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "interp:cubic",
+        "multi_freq",
+        "dielectric"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "interp_poly_cheb_strip",
+      "description": "Polynomial interpolation from Chebyshev-sampled strip-waveguide frequencies.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "interp:poly",
+        "sampling:cheb",
+        "multi_freq",
+        "dielectric"
+      ],
+      "tolerances": {
+        "field_rel": 1e-05,
+        "n_complex_atol": 5e-08
+      }
+    },
+    {
+      "case_id": "sort_mode_area_te_filter",
+      "description": "Mode sorting by effective mode area with TE-fraction metric evaluation.",
+      "requires": [],
+      "suite": "extended",
+      "tags": [
+        "axis:z",
+        "sort:mode_area",
+        "filter:TE_fraction",
+        "dielectric"
+      ],
+      "tolerances": {
+        "field_rel": 5e-05,
+        "n_complex_atol": 5e-08
+      }
+    }
+  ],
+  "schema_version": 1
+}

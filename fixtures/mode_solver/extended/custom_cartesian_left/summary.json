@@ -1,0 +1,581 @@
+{
+  "case": {
+    "case_id": "custom_cartesian_left",
+    "description": "Custom Cartesian medium sampled at the low-index side of a waveguide.",
+    "requires": [],
+    "suite": "extended",
+    "tags": [
+      "axis:x",
+      "custom_medium",
+      "cartesian",
+      "nearest"
+    ],
+    "tolerances": {
+      "field_rel": 1e-05,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 433.4934713192673,
+            "max_abs": 22.279420231636024,
+            "nonzero": 1320
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 814.8383297957434,
+            "max_abs": 37.36659611897427,
+            "nonzero": 1381
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 814.8390351276406,
+            "max_abs": 37.36662957110584,
+            "nonzero": 1389
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 1.5759325398501585,
+            "max_abs": 0.07059033256350539,
+            "nonzero": 1444
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 2.9009050908367886,
+            "max_abs": 0.15245293502499346,
+            "nonzero": 1385
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 1,
+          "max": -0.5,
+          "min": -0.5
+        },
+        "y": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        },
+        "z": {
+          "len": 38,
+          "max": 0.5000000000000004,
+          "min": -0.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 2.9009025315318455,
+            "max_abs": 0.15245279269630474,
+            "nonzero": 1378
+          }
+        ]
+      ],
+      "shape": [
+        1,
+        38,
+        38,
+        1,
+        1
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:26:28+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      -0.5,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 1,
+      "num_pml": [
+        0,
+        0
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": null,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      0.0,
+      0.9,
+      0.9
+    ],
+    "store_fields_direction": "+",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          1,
+          1
+        ],
+        "values": [
+          [
+            0.49768527672818413
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            0.0
+          ]
+        ],
+        "real": [
+          [
+            1.1555135728188128
+          ]
+        ],
+        "shape": [
+          1,
+          1
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 299792458000000.0,
+            "min": 299792458000000.0
+          },
+          "mode_index": {
+            "len": 1,
+            "max": 0.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            1
+          ],
+          "values": [
+            [
+              0.4999995691314313
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 299792458000000.0,
+            "min": 299792458000000.0
+          },
+          "mode_index": {
+            "len": 1,
+            "max": 0.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            1
+          ],
+          "values": [
+            [
+              0.5000004308685687
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    -0.5099999999999998,
+    2.7755575615628914e-16,
+    2.7755575615628914e-16
+  ]
+}

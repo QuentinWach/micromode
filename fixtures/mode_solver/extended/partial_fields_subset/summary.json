@@ -1,0 +1,279 @@
+{
+  "case": {
+    "case_id": "partial_fields_subset",
+    "description": "Solver output restricted to a subset of field components.",
+    "requires": [],
+    "suite": "extended",
+    "tags": [
+      "axis:y",
+      "fields:subset"
+    ],
+    "tolerances": {
+      "field_rel": 1e-05,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 41,
+          "max": 2.0,
+          "min": -2.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 1.9855712089199285e-13,
+            "max_abs": 1.0289934402256152e-14,
+            "nonzero": 1198
+          }
+        ]
+      ],
+      "shape": [
+        41,
+        1,
+        31,
+        1,
+        1
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 41,
+          "max": 2.0,
+          "min": -2.0
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 31,
+          "max": 1.5,
+          "min": -1.5
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 9.574062983617185e-16,
+            "max_abs": 1.116891511007255e-16,
+            "nonzero": 1197
+          }
+        ]
+      ],
+      "shape": [
+        41,
+        1,
+        31,
+        1,
+        1
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:26:28+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": true,
+    "conjugated_dot_product": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 1,
+      "num_pml": [
+        0,
+        0
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": null,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      5.0,
+      0.0,
+      5.0
+    ],
+    "store_fields_direction": "+",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "message": "Field components ['Ey', 'Ez'] not included in this reference result object. Use the 'fields' argument of a `mode solver` or a `field monitor` to select which components are stored.",
+      "unavailable": "DataError"
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 299792458000000.0,
+          "min": 299792458000000.0
+        },
+        "mode_index": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            0.0
+          ]
+        ],
+        "real": [
+          [
+            0.9921607885082493
+          ]
+        ],
+        "shape": [
+          1,
+          1
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "message": "Field components ['Ey', 'Ez'] not included in this reference result object. Use the 'fields' argument of a `mode solver` or a `field monitor` to select which components are stored.",
+      "unavailable": "DataError"
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Hz"
+    ],
+    "freqs": [
+      299792458000000.0
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    0.0,
+    -0.04999999999999982,
+    0.0
+  ]
+}

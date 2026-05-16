@@ -1,0 +1,10 @@
+.pytest_cache/
+.coverage
+coverage.xml
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+dist/
+target/
+tmp/

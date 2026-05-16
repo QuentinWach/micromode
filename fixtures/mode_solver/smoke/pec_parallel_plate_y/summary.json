@@ -1,0 +1,618 @@
+{
+  "case": {
+    "case_id": "pec_parallel_plate_y",
+    "description": "Y-propagating air guide bounded by PEC walls with non-colocated output.",
+    "requires": [],
+    "suite": "smoke",
+    "tags": [
+      "axis:y",
+      "pec",
+      "colocate:false",
+      "uniform_grid",
+      "outside_80_target",
+      "boundary_condition"
+    ],
+    "tolerances": {
+      "field_rel": 5e-06,
+      "n_complex_atol": 5e-08
+    }
+  },
+  "environment": {
+    "numpy": "2.3.5",
+    "platform": "macOS-15.6-arm64-arm-64bit-Mach-O",
+    "python": "3.13.9",
+    "reference_solver_version": "2.11.2"
+  },
+  "eps_spec": [
+    "diagonal"
+  ],
+  "fields": {
+    "Ex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.04,
+          "min": -1.04
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.75,
+          "min": -0.8289473684210527
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 8.839242165716736e-14,
+            "max_abs": 1.5060297512936436e-14,
+            "nonzero": 400
+          },
+          {
+            "l2": 375.01042245297407,
+            "max_abs": 24.250776898015985,
+            "nonzero": 450
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    },
+    "Ey": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.0,
+          "min": -1.08
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.75,
+          "min": -0.8289473684210527
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 9.62321214285799e-13,
+            "max_abs": 1.9660643354970487e-13,
+            "nonzero": 420
+          },
+          {
+            "l2": 1.0675549921024114e-12,
+            "max_abs": 1.724711513658117e-13,
+            "nonzero": 432
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    },
+    "Ez": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.0,
+          "min": -1.08
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.7894736842105263,
+          "min": -0.7894736842105263
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 361.7362680925298,
+            "max_abs": 23.426230880947454,
+            "nonzero": 456
+          },
+          {
+            "l2": 1.4128729044314767e-13,
+            "max_abs": 1.725294753595248e-14,
+            "nonzero": 456
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    },
+    "Hx": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.0,
+          "min": -1.08
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.7894736842105263,
+          "min": -0.7894736842105263
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.8852816975593408,
+            "max_abs": 0.05733130811311857,
+            "nonzero": 456
+          },
+          {
+            "l2": 8.559443104516534e-15,
+            "max_abs": 1.7107300728136261e-15,
+            "nonzero": 456
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    },
+    "Hy": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.04,
+          "min": -1.04
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.7894736842105263,
+          "min": -0.7894736842105263
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 0.3718325470494255,
+            "max_abs": 0.024080071213656858,
+            "nonzero": 474
+          },
+          {
+            "l2": 0.5137222482133875,
+            "max_abs": 0.033220846363362894,
+            "nonzero": 475
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    },
+    "Hz": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        },
+        "x": {
+          "len": 27,
+          "max": 1.04,
+          "min": -1.04
+        },
+        "y": {
+          "len": 1,
+          "max": 0.0,
+          "min": 0.0
+        },
+        "z": {
+          "len": 21,
+          "max": 0.75,
+          "min": -0.8289473684210527
+        }
+      },
+      "dims": [
+        "x",
+        "y",
+        "z",
+        "f",
+        "mode_index"
+      ],
+      "dtype": "complex128",
+      "norms_by_f_mode": [
+        [
+          {
+            "l2": 6.708725939445568e-15,
+            "max_abs": 1.3656176935394573e-15,
+            "nonzero": 450
+          },
+          {
+            "l2": 0.8526310285596793,
+            "max_abs": 0.05513704049790792,
+            "nonzero": 450
+          }
+        ]
+      ],
+      "shape": [
+        27,
+        1,
+        21,
+        1,
+        2
+      ]
+    }
+  },
+  "generated_at": "2026-05-14T05:22:52+00:00",
+  "monitor": {
+    "apodization": {
+      "attrs": {},
+      "end": null,
+      "start": null,
+      "type": "ApodizationSpec",
+      "width": null
+    },
+    "attrs": {},
+    "center": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "colocate": false,
+    "conjugated_dot_product": true,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      193414489032258.06
+    ],
+    "interval_space": [
+      1,
+      1,
+      1
+    ],
+    "mode_spec": {
+      "angle_phi": 0.0,
+      "angle_rotation": false,
+      "angle_theta": 0.0,
+      "attrs": {},
+      "bend_axis": null,
+      "bend_radius": null,
+      "filter_pol": null,
+      "group_index_step": false,
+      "interp_spec": null,
+      "num_modes": 2,
+      "num_pml": [
+        0,
+        0
+      ],
+      "precision": "double",
+      "sort_spec": {
+        "attrs": {},
+        "bounding_box": null,
+        "filter_key": null,
+        "filter_order": "over",
+        "filter_reference": 0.0,
+        "keep_modes": "all",
+        "sort_key": "n_eff",
+        "sort_order": "descending",
+        "sort_reference": null,
+        "track_freq": "central",
+        "type": "mode_sort_spec"
+      },
+      "target_neff": null,
+      "track_freq": null,
+      "type": "mode_spec"
+    },
+    "name": "reference_monitor",
+    "size": [
+      2.0,
+      0.0,
+      1.5
+    ],
+    "store_fields_direction": "+",
+    "type": "field monitor",
+    "use_colocated_integration": true
+  },
+  "scalars": {
+    "dispersion": null,
+    "mode_area": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "float64",
+        "shape": [
+          1,
+          2
+        ],
+        "values": [
+          [
+            2.000000000000007,
+            2.0000000000000067
+          ]
+        ]
+      }
+    },
+    "n_complex": {
+      "coords": {
+        "f": {
+          "len": 1,
+          "max": 193414489032258.06,
+          "min": 193414489032258.06
+        },
+        "mode_index": {
+          "len": 2,
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "dims": [
+        "f",
+        "mode_index"
+      ],
+      "values": {
+        "dtype": "complex128",
+        "imag": [
+          [
+            0.0,
+            0.0
+          ]
+        ],
+        "real": [
+          [
+            0.9219768130071612,
+            0.8565414068502585
+          ]
+        ],
+        "shape": [
+          1,
+          2
+        ]
+      }
+    },
+    "n_group": null,
+    "pol_fraction": {
+      "te": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 193414489032258.06,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              5.426514505316771e-32,
+              1.0
+            ]
+          ]
+        }
+      },
+      "tm": {
+        "coords": {
+          "f": {
+            "len": 1,
+            "max": 193414489032258.06,
+            "min": 193414489032258.06
+          },
+          "mode_index": {
+            "len": 2,
+            "max": 1.0,
+            "min": 0.0
+          }
+        },
+        "dims": [
+          "f",
+          "mode_index"
+        ],
+        "values": {
+          "dtype": "float64",
+          "shape": [
+            1,
+            2
+          ],
+          "values": [
+            [
+              1.0,
+              0.0
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "solver": {
+    "colocate": false,
+    "direction": "+",
+    "fields": [
+      "Ex",
+      "Ey",
+      "Ez",
+      "Hx",
+      "Hy",
+      "Hz"
+    ],
+    "freqs": [
+      193414489032258.06
+    ]
+  },
+  "symmetry": [
+    0,
+    0,
+    0
+  ],
+  "symmetry_center": [
+    0.0,
+    0.0,
+    0.0
+  ]
+}
