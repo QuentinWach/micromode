@@ -61,12 +61,15 @@ jobs:
 
       - name: Install macOS system libraries
         if: runner.os == 'macOS'
-        run: brew install arpack suite-sparse
+        run: brew install arpack lapack openblas suite-sparse
 
       - name: Export macOS native library paths
         if: runner.os == 'macOS'
         run: |
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix gcc)/lib/gcc/current:$(brew --prefix openblas)/lib:$(brew --prefix arpack)/lib:$(brew --prefix suite-sparse)/lib" >> "$GITHUB_ENV"
+          echo "CPATH=$(brew --prefix lapack)/include:$(brew --prefix openblas)/include:$(brew --prefix suite-sparse)/include" >> "$GITHUB_ENV"
+          echo "LIBRARY_PATH=$(brew --prefix gcc)/lib/gcc/current:$(brew --prefix lapack)/lib:$(brew --prefix openblas)/lib:$(brew --prefix arpack)/lib:$(brew --prefix suite-sparse)/lib" >> "$GITHUB_ENV"
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix gcc)/lib/gcc/current:$(brew --prefix lapack)/lib:$(brew --prefix openblas)/lib:$(brew --prefix arpack)/lib:$(brew --prefix suite-sparse)/lib" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(brew --prefix lapack)/lib/pkgconfig:$(brew --prefix openblas)/lib/pkgconfig:$(brew --prefix arpack)/lib/pkgconfig:$(brew --prefix suite-sparse)/lib/pkgconfig" >> "$GITHUB_ENV"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -76,7 +79,7 @@ jobs:
 
       - name: Build wheel
         run: |
-          uv run --extra dev maturin build \
+          uv tool run --from "maturin>=1.7,<2" maturin build \
             --release \
             --out dist \
             --interpreter "$(uv python find ${{ matrix.python-version }})" \

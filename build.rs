@@ -9,11 +9,18 @@ fn main() {
         for candidate in [
             "/opt/homebrew/opt/gcc/lib/gcc/current",
             "/usr/local/opt/gcc/lib/gcc/current",
+            "/opt/homebrew/opt/lapack/lib",
+            "/usr/local/opt/lapack/lib",
+            "/opt/homebrew/opt/openblas/lib",
+            "/usr/local/opt/openblas/lib",
+            "/opt/homebrew/opt/arpack/lib",
+            "/usr/local/opt/arpack/lib",
+            "/opt/homebrew/opt/suite-sparse/lib",
+            "/usr/local/opt/suite-sparse/lib",
         ] {
-            if Path::new(candidate).join("libgcc_s.1.1.dylib").exists() {
+            if Path::new(candidate).exists() {
                 println!("cargo:rustc-link-search=native={candidate}");
                 println!("cargo:rustc-link-arg=-Wl,-rpath,{candidate}");
-                break;
             }
         }
     }
