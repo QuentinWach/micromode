@@ -20,6 +20,7 @@ path = "benchmarks/eigensolver_backend_benchmark.rs"
 required-features = ["umfpack-backend"]
 
 [dependencies]
+amd = "0.2"
 nalgebra = "0.33"
 num-complex = "0.4"
 pyo3 = { version = "0.23.5", optional = true }

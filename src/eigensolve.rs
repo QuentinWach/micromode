@@ -286,6 +286,7 @@ struct SparseLu {
     l: rlu::Matrix<usize, Complex64>,
     u: rlu::Matrix<usize, Complex64>,
     row_perm: Vec<Option<usize>>,
+    col_perm: Option<Vec<usize>>,
 }
 
 impl SparseLu {
@@ -295,12 +296,20 @@ impl SparseLu {
         if matrix.rows != matrix.cols {
             return Err("LU factorization requires a square matrix".to_string());
         }
+        let col_perm = amd::order::<usize>(
+            matrix.rows,
+            matrix.col_ptrs(),
+            matrix.row_indices(),
+            &amd::Control::default(),
+        )
+        .map(|(perm, _, _)| perm)
+        .ok();
         let (l, u, row_perm) = rlu::lu_decomposition(
             matrix.rows,
             matrix.row_indices(),
             matrix.col_ptrs(),
             matrix.values(),
-            None::<&[usize]>,
+            col_perm.as_deref(),
             None,
             None,
             true,
@@ -313,6 +322,7 @@ impl SparseLu {
             l,
             u,
             row_perm,
+            col_perm,
         })
     }
 
@@ -326,7 +336,16 @@ impl SparseLu {
         }
         rlu::lsolve(&self.l, &mut out);
         rlu::usolve(&self.u, &mut out);
-        Ok(out)
+        match &self.col_perm {
+            Some(col_perm) => {
+                let mut unpermuted = vec![Complex64::new(0.0, 0.0); self.n];
+                for (index, value) in out.into_iter().enumerate() {
+                    unpermuted[col_perm[index]] = value;
+                }
+                Ok(unpermuted)
+            }
+            None => Ok(out),
+        }
     }
 }
 

@@ -181,6 +181,7 @@ dependencies = [
 name = "micromode-core"
 version = "0.1.0-alpha.1"
 dependencies = [
+ "amd",
  "nalgebra",
  "num-complex",
  "pyo3",
