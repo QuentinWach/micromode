@@ -115,7 +115,7 @@ jobs:
 
       - name: Check metadata
         run: |
-          python -m pip install --upgrade twine
+          python -m pip install --upgrade "twine>=6.2,<7" "pkginfo>=1.12.1.2"
           python scripts/check_release_metadata.py
           python scripts/check_dist_artifacts.py dist \
             --require-cpython 3.10 3.11 3.12 3.13 \
