@@ -39,6 +39,7 @@ dependencies = [
 Homepage = "https://github.com/QuentinWach/micromode"
 Repository = "https://github.com/QuentinWach/micromode"
 Issues = "https://github.com/QuentinWach/micromode/issues"
+Examples = "https://github.com/QuentinWach/micromode/tree/main/examples"
 Changelog = "https://github.com/QuentinWach/micromode/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
