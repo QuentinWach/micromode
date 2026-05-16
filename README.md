@@ -10,6 +10,57 @@ A minimal FDFD electromagnetic mode solver for rasterized waveguide cross sectio
 pip install micromode
 ```
 
+## Supported Platforms
+
+The default Python package uses the portable Rust sparse backend. It does not
+require ARPACK, SuiteSparse, BLAS, LAPACK, or a Fortran compiler at install
+time.
+
+Published wheels are built for:
+
+- Linux, CPython 3.10-3.13
+- macOS Intel and Apple Silicon, CPython 3.10-3.13
+
+Source builds should work on platforms with a supported Rust toolchain and
+Python 3.10-3.13. Windows source builds use the same portable backend, but
+Windows wheels are not release-tested yet.
+
+## Source Builds
+
+For the portable backend, install Rust and build normally:
+
+```bash
+pip install .
+```
+
+or, for local development:
+
+```bash
+uv sync --all-extras
+uv run maturin develop
+```
+
+MicroMode also keeps an accelerated sparse backend behind explicit Rust
+features. That path uses ARPACK for Krylov iteration and SuiteSparse/UMFPACK for
+sparse LU factorization. It can be faster on larger grids, but source builds
+must provide the native system libraries:
+
+- Fortran compiler, such as `gfortran`
+- ARPACK
+- BLAS/LAPACK or OpenBLAS
+- SuiteSparse/UMFPACK
+
+To build the accelerated Python extension locally:
+
+```bash
+uv run maturin develop --features extension-module,arpack-backend,umfpack-backend
+```
+
+To test the accelerated Rust backend:
+
+```bash
+cargo test --features arpack-backend,umfpack-backend
+```
 
 ## Why Use It?
 

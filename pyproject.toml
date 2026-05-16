@@ -64,7 +64,7 @@ package = true
 [tool.maturin]
 module-name = "micromode._core"
 python-source = "python"
-features = ["extension-module", "arpack-backend", "umfpack-backend"]
+features = ["extension-module"]
 auditwheel = "skip"
 
 [tool.pytest.ini_options]

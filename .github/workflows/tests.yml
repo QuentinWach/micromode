@@ -7,7 +7,8 @@ on:
     branches: [main, master]
 
 jobs:
-  test:
+  test-portable:
+    name: Portable tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -16,11 +17,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gfortran libarpack2-dev liblapacke-dev libopenblas-dev libsuitesparse-dev
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -40,10 +36,10 @@ jobs:
         run: uv run python scripts/check_release_metadata.py
 
       - name: Run Python tests
-        run: uv run pytest --cov=micromode --cov-report=xml --cov-report=term-missing
+        run: uv run pytest -m "not slow" --cov=micromode --cov-report=xml --cov-report=term-missing
 
       - name: Run Rust tests
-        run: cargo test
+        run: cargo test --no-default-features
 
       - name: Build distributions
         if: matrix.python-version == '3.13'
@@ -61,3 +57,35 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-accelerated:
+    name: Accelerated backend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran libarpack2-dev liblapacke-dev libopenblas-dev libsuitesparse-dev
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Build accelerated extension
+        run: uv run maturin develop --features extension-module,arpack-backend,umfpack-backend
+
+      - name: Run Python tests
+        run: uv run pytest
+
+      - name: Run accelerated Rust tests
+        run: cargo test --features arpack-backend,umfpack-backend
