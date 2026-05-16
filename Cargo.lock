@@ -36,15 +36,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arpack-sys"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbda3ca06836646301b0c103c67f83f4ea756e89dbef76241082c2cb845ee16e"
-dependencies = [
- "pkg-config",
-]
-
-[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -190,7 +181,6 @@ dependencies = [
 name = "micromode-core"
 version = "0.1.0-alpha.1"
 dependencies = [
- "arpack-sys",
  "nalgebra",
  "num-complex",
  "pyo3",
@@ -286,12 +276,6 @@ name = "paste"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
-
-[[package]]
-name = "pkg-config"
-version = "0.3.33"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
 
 [[package]]
 name = "portable-atomic"

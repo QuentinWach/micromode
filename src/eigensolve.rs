@@ -42,9 +42,9 @@ pub fn selected_sparse_shift_invert_eigenpairs(
 ) -> Result<Vec<Eigenpair>, String> {
     // Prefer packaged sparse backends first. If an optional backend cannot
     // handle this matrix, fall through to the next available implementation.
-    #[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+    #[cfg(feature = "umfpack-backend")]
     {
-        if let Ok(pairs) = selected_sparse_shift_invert_umfpack_eigenpairs(
+        if let Ok(pairs) = selected_sparse_shift_invert_native_umfpack_eigenpairs(
             mat,
             num_modes,
             guess_value,
@@ -55,19 +55,22 @@ pub fn selected_sparse_shift_invert_eigenpairs(
         }
     }
 
-    #[cfg(feature = "arpack-backend")]
-    {
-        if let Ok(pairs) = selected_sparse_shift_invert_arpack_eigenpairs(
-            mat,
-            num_modes,
-            guess_value,
-            initial_vector,
-            options.clone(),
-        ) {
-            return Ok(pairs);
-        }
-    }
+    selected_sparse_shift_invert_native_eigenpairs(
+        mat,
+        num_modes,
+        guess_value,
+        initial_vector,
+        options,
+    )
+}
 
+pub fn selected_sparse_shift_invert_native_eigenpairs(
+    mat: &SparseMatrix,
+    num_modes: usize,
+    guess_value: Complex64,
+    initial_vector: Option<&[Complex64]>,
+    options: ShiftInvertOptions,
+) -> Result<Vec<Eigenpair>, String> {
     if mat.rows != mat.cols {
         return Err("eigenvalue matrix must be square".to_string());
     }
@@ -84,6 +87,58 @@ pub fn selected_sparse_shift_invert_eigenpairs(
     // theta of the inverse-shifted operator map back to lambda = sigma + 1/theta.
     let shifted = mat.shifted_diagonal(guess_value);
     let factorization = SparseLu::factor(&shifted)?;
+    selected_sparse_shift_invert_native_with_solver(
+        mat,
+        num_modes,
+        guess_value,
+        initial_vector,
+        options,
+        "native_shift_invert",
+        |input| factorization.solve(input),
+    )
+}
+
+#[cfg(feature = "umfpack-backend")]
+pub fn selected_sparse_shift_invert_native_umfpack_eigenpairs(
+    mat: &SparseMatrix,
+    num_modes: usize,
+    guess_value: Complex64,
+    initial_vector: Option<&[Complex64]>,
+    options: ShiftInvertOptions,
+) -> Result<Vec<Eigenpair>, String> {
+    if mat.rows != mat.cols {
+        return Err("eigenvalue matrix must be square".to_string());
+    }
+    if num_modes == 0 {
+        return Err("num_modes must be positive".to_string());
+    }
+    let shifted = mat.shifted_diagonal(guess_value);
+    let mut factorization = UmfpackLu::factor(&shifted)?;
+    selected_sparse_shift_invert_native_with_solver(
+        mat,
+        num_modes,
+        guess_value,
+        initial_vector,
+        options,
+        "native_umfpack_shift_invert",
+        |input| factorization.solve(input),
+    )
+}
+
+fn selected_sparse_shift_invert_native_with_solver<F>(
+    mat: &SparseMatrix,
+    num_modes: usize,
+    guess_value: Complex64,
+    initial_vector: Option<&[Complex64]>,
+    options: ShiftInvertOptions,
+    backend: &'static str,
+    mut solve: F,
+) -> Result<Vec<Eigenpair>, String>
+where
+    F: FnMut(&[Complex64]) -> Result<Vec<Complex64>, String>,
+{
+    let n = mat.rows;
+    let krylov_dim = options.krylov_dim.min(n).max(num_modes + 2);
     let start = initial_vector
         .map(|values| {
             if values.len() != n {
@@ -97,10 +152,8 @@ pub fn selected_sparse_shift_invert_eigenpairs(
     let mut actual_dim = 0usize;
 
     for col in 0..krylov_dim {
-        // Native Arnoldi fallback with one reorthogonalization pass. The ARPACK
-        // path is preferred for production, but this keeps the crate testable
-        // when external sparse libraries are unavailable.
-        let mut work = factorization.solve(&q_vectors[col])?;
+        // Native Arnoldi fallback with one reorthogonalization pass.
+        let mut work = solve(&q_vectors[col])?;
         for row in 0..=col {
             let projection = complex_dot(&q_vectors[row], &work);
             hessenberg[(row, col)] = projection;
@@ -163,365 +216,18 @@ pub fn selected_sparse_shift_invert_eigenpairs(
             value,
             vector,
             residual,
-            backend: "native_shift_invert",
+            backend,
         })
         .collect())
 }
 
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
-pub fn selected_sparse_shift_invert_umfpack_eigenpairs(
-    mat: &SparseMatrix,
-    num_modes: usize,
-    guess_value: Complex64,
-    initial_vector: Option<&[Complex64]>,
-    options: ShiftInvertOptions,
-) -> Result<Vec<Eigenpair>, String> {
-    // UMFPACK provides robust sparse LU factors, while ARPACK drives the Krylov
-    // iteration. This is the current production sparse path when SuiteSparse is
-    // available at build time.
-    if mat.rows != mat.cols {
-        return Err("eigenvalue matrix must be square".to_string());
-    }
-    if num_modes == 0 {
-        return Err("num_modes must be positive".to_string());
-    }
-    let n = mat.rows;
-    let ncv = options.krylov_dim.min(n).max(num_modes + 2);
-    if ncv <= num_modes + 1 || ncv > n {
-        return Err(
-            "krylov_dim must satisfy num_modes + 2 <= krylov_dim <= matrix size".to_string(),
-        );
-    }
-
-    let shifted = mat.shifted_diagonal(guess_value);
-    let mut factorization = UmfpackLu::factor(&shifted)?;
-    let maxiter = (10 * n).max(300).min(i32::MAX as usize);
-    let (theta_values, vectors) = arpack_shift_invert_vectors(
-        n,
-        num_modes,
-        ncv,
-        maxiter,
-        options.tolerance,
-        initial_vector,
-        |input| factorization.solve(input),
-    )?;
-    let mut candidates = Vec::with_capacity(theta_values.len());
-    for mode_index in 0..theta_values.len() {
-        let theta = theta_values[mode_index];
-        if theta.norm() <= options.tolerance {
-            continue;
-        }
-        let lambda = guess_value + Complex64::new(1.0, 0.0) / theta;
-        let vector = normalize_complex_vector(vectors[mode_index].clone());
-        let residual = sparse_residual_norm(mat, &vector, lambda);
-        candidates.push((lambda, vector, residual));
-    }
-    candidates.sort_by(|(left, _, left_res), (right, _, right_res)| {
-        let left_distance = (*left - guess_value).norm();
-        let right_distance = (*right - guess_value).norm();
-        left_distance
-            .partial_cmp(&right_distance)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                left_res
-                    .partial_cmp(right_res)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-    });
-    candidates.truncate(num_modes);
-    if candidates.len() != num_modes {
-        return Err(format!(
-            "UMFPACK/ARPACK returned {} usable eigenpairs, expected {}",
-            candidates.len(),
-            num_modes
-        ));
-    }
-    Ok(candidates
-        .into_iter()
-        .map(|(value, vector, residual)| Eigenpair {
-            value,
-            vector,
-            residual,
-            backend: "umfpack_arpack",
-        })
-        .collect())
-}
-
-#[cfg(feature = "arpack-backend")]
-pub fn selected_sparse_shift_invert_arpack_eigenpairs(
-    mat: &SparseMatrix,
-    num_modes: usize,
-    guess_value: Complex64,
-    initial_vector: Option<&[Complex64]>,
-    options: ShiftInvertOptions,
-) -> Result<Vec<Eigenpair>, String> {
-    // ARPACK can also run with the small native LU factorization. It is less
-    // robust than UMFPACK but avoids requiring SuiteSparse.
-    if mat.rows != mat.cols {
-        return Err("eigenvalue matrix must be square".to_string());
-    }
-    if num_modes == 0 {
-        return Err("num_modes must be positive".to_string());
-    }
-    let n = mat.rows;
-    let ncv = options.krylov_dim.min(n).max(num_modes + 2);
-    if ncv <= num_modes + 1 || ncv > n {
-        return Err(
-            "krylov_dim must satisfy num_modes + 2 <= krylov_dim <= matrix size".to_string(),
-        );
-    }
-
-    let shifted = mat.shifted_diagonal(guess_value);
-    let factorization = SparseLu::factor(&shifted)?;
-    let maxiter = (10 * n).max(300).min(i32::MAX as usize);
-    let (theta_values, vectors) = arpack_shift_invert_vectors(
-        n,
-        num_modes,
-        ncv,
-        maxiter,
-        options.tolerance,
-        initial_vector,
-        |input| factorization.solve(input),
-    )?;
-    let mut candidates = Vec::with_capacity(theta_values.len());
-    for mode_index in 0..theta_values.len() {
-        let theta = theta_values[mode_index];
-        if theta.norm() <= options.tolerance {
-            continue;
-        }
-        let lambda = guess_value + Complex64::new(1.0, 0.0) / theta;
-        let vector = vectors[mode_index].clone();
-        let vector = normalize_complex_vector(vector);
-        let residual = sparse_residual_norm(mat, &vector, lambda);
-        candidates.push((lambda, vector, residual));
-    }
-    candidates.sort_by(|(left, _, left_res), (right, _, right_res)| {
-        let left_distance = (*left - guess_value).norm();
-        let right_distance = (*right - guess_value).norm();
-        left_distance
-            .partial_cmp(&right_distance)
-            .unwrap_or(std::cmp::Ordering::Equal)
-            .then_with(|| {
-                left_res
-                    .partial_cmp(right_res)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-    });
-    candidates.truncate(num_modes);
-    if candidates.len() != num_modes {
-        return Err(format!(
-            "ARPACK returned {} usable eigenpairs, expected {}",
-            candidates.len(),
-            num_modes
-        ));
-    }
-    Ok(candidates
-        .into_iter()
-        .map(|(value, vector, residual)| Eigenpair {
-            value,
-            vector,
-            residual,
-            backend: "arpack",
-        })
-        .collect())
-}
-
-#[cfg(feature = "arpack-backend")]
-static ARPACK_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-#[cfg(feature = "arpack-backend")]
-fn arpack_shift_invert_vectors<F>(
-    n: usize,
-    num_modes: usize,
-    ncv: usize,
-    maxiter: usize,
-    tolerance: f64,
-    initial_vector: Option<&[Complex64]>,
-    mut op_solve: F,
-) -> Result<(Vec<Complex64>, Vec<Vec<Complex64>>), String>
-where
-    F: FnMut(&[Complex64]) -> Result<Vec<Complex64>, String>,
-{
-    // ARPACK uses reverse communication. `znaupd` repeatedly asks us to compute
-    // y = OP*x by pointing into work arrays; `op_solve` supplies that product.
-    // The mutex serializes access to ARPACK's Fortran state.
-    use std::os::raw::c_int;
-
-    use arpack_sys::{__BindgenComplex, znaupd_c, zneupd_c};
-
-    let n_i32 = c_int::try_from(n).map_err(|_| "matrix size exceeds ARPACK c_int".to_string())?;
-    let nev_i32 =
-        c_int::try_from(num_modes).map_err(|_| "num_modes exceeds ARPACK c_int".to_string())?;
-    let ncv_i32 =
-        c_int::try_from(ncv).map_err(|_| "krylov_dim exceeds ARPACK c_int".to_string())?;
-    let maxiter_i32 =
-        c_int::try_from(maxiter).map_err(|_| "maxiter exceeds ARPACK c_int".to_string())?;
-    let workd_len = n
-        .checked_mul(3)
-        .ok_or_else(|| "ARPACK workd size overflow".to_string())?;
-    let v_len = n
-        .checked_mul(ncv)
-        .ok_or_else(|| "ARPACK basis size overflow".to_string())?;
-    let lworkl = 3usize
-        .checked_mul(ncv)
-        .and_then(|value| value.checked_mul(ncv))
-        .and_then(|value| value.checked_add(6 * ncv))
-        .ok_or_else(|| "ARPACK workl size overflow".to_string())?;
-    let lworkl_i32 =
-        c_int::try_from(lworkl).map_err(|_| "ARPACK workl exceeds c_int".to_string())?;
-
-    let zero = __BindgenComplex { re: 0.0, im: 0.0 };
-    let mut ido: c_int = 0;
-    let mut resid = vec![zero; n];
-    let mut info: c_int = 0;
-    if let Some(values) = initial_vector {
-        if values.len() != n {
-            return Err("initial vector length does not match matrix size".to_string());
-        }
-        write_raw_complex(&mut resid, values);
-        info = 1;
-    }
-    let mut v = vec![zero; v_len];
-    let mut iparam = [0 as c_int; 11];
-    iparam[0] = 1;
-    iparam[2] = maxiter_i32;
-    iparam[3] = 1;
-    iparam[6] = 1;
-    let mut ipntr = [0 as c_int; 14];
-    let mut workd = vec![zero; workd_len];
-    let mut workl = vec![zero; lworkl];
-    let mut rwork = vec![0.0; ncv];
-    let bmat = b"I\0";
-    let which = b"LM\0";
-
-    let _guard = ARPACK_MUTEX
-        .lock()
-        .map_err(|_| "failed to lock ARPACK mutex".to_string())?;
-
-    loop {
-        unsafe {
-            znaupd_c(
-                &mut ido,
-                bmat.as_ptr().cast(),
-                n_i32,
-                which.as_ptr().cast(),
-                nev_i32,
-                tolerance,
-                resid.as_mut_ptr(),
-                ncv_i32,
-                v.as_mut_ptr(),
-                n_i32,
-                iparam.as_mut_ptr(),
-                ipntr.as_mut_ptr(),
-                workd.as_mut_ptr(),
-                workl.as_mut_ptr(),
-                lworkl_i32,
-                rwork.as_mut_ptr(),
-                &mut info,
-            );
-        }
-
-        match ido {
-            -1 | 1 => {
-                // `ipntr` contains one-based offsets into ARPACK's workspace.
-                // Convert and bounds-check them before constructing Rust slices.
-                let x_offset = usize::try_from(ipntr[0] - 1)
-                    .map_err(|_| "ARPACK returned invalid input pointer".to_string())?;
-                let y_offset = usize::try_from(ipntr[1] - 1)
-                    .map_err(|_| "ARPACK returned invalid output pointer".to_string())?;
-                if x_offset + n > workd.len() || y_offset + n > workd.len() {
-                    return Err("ARPACK work pointer out of bounds".to_string());
-                }
-                let input = raw_complex_to_vec(&workd[x_offset..x_offset + n]);
-                let output = op_solve(&input)?;
-                if output.len() != n {
-                    return Err("ARPACK operator returned vector with wrong length".to_string());
-                }
-                write_raw_complex(&mut workd[y_offset..y_offset + n], &output);
-            }
-            99 => break,
-            other => return Err(format!("ARPACK returned unsupported ido={other}")),
-        }
-    }
-
-    if !matches!(info, 0 | 1 | 2) {
-        return Err(format!("ARPACK znaupd failed with info={info}"));
-    }
-
-    // Extract the converged Ritz values and vectors from ARPACK.
-    let mut select = vec![0 as c_int; ncv];
-    let mut theta = vec![zero; num_modes + 1];
-    let mut z = vec![zero; n * num_modes];
-    let mut workev = vec![zero; 2 * ncv];
-    let mut info_eupd: c_int = 0;
-    unsafe {
-        zneupd_c(
-            1,
-            b"A\0".as_ptr().cast(),
-            select.as_mut_ptr(),
-            theta.as_mut_ptr(),
-            z.as_mut_ptr(),
-            n_i32,
-            zero,
-            workev.as_mut_ptr(),
-            bmat.as_ptr().cast(),
-            n_i32,
-            which.as_ptr().cast(),
-            nev_i32,
-            tolerance,
-            resid.as_mut_ptr(),
-            ncv_i32,
-            v.as_mut_ptr(),
-            n_i32,
-            iparam.as_mut_ptr(),
-            ipntr.as_mut_ptr(),
-            workd.as_mut_ptr(),
-            workl.as_mut_ptr(),
-            lworkl_i32,
-            rwork.as_mut_ptr(),
-            &mut info_eupd,
-        );
-    }
-    if info_eupd != 0 {
-        return Err(format!("ARPACK zneupd failed with info={info_eupd}"));
-    }
-
-    let values = raw_complex_to_vec(&theta[..num_modes]);
-    let vectors = (0..num_modes)
-        .map(|mode_index| {
-            (0..n)
-                .map(|row| raw_to_complex(z[mode_index * n + row]))
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    Ok((values, vectors))
-}
-
-#[cfg(feature = "arpack-backend")]
-fn raw_complex_to_vec(values: &[arpack_sys::__BindgenComplex<f64>]) -> Vec<Complex64> {
-    values.iter().copied().map(raw_to_complex).collect()
-}
-
-#[cfg(feature = "arpack-backend")]
-fn raw_to_complex(value: arpack_sys::__BindgenComplex<f64>) -> Complex64 {
-    Complex64::new(value.re, value.im)
-}
-
-#[cfg(feature = "arpack-backend")]
-fn write_raw_complex(target: &mut [arpack_sys::__BindgenComplex<f64>], source: &[Complex64]) {
-    for (target, value) in target.iter_mut().zip(source) {
-        target.re = value.re;
-        target.im = value.im;
-    }
-}
-
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+#[cfg(feature = "umfpack-backend")]
 struct UmfpackLu {
     n: usize,
     solver: russell_sparse::prelude::ComplexSolverUMFPACK,
 }
 
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+#[cfg(feature = "umfpack-backend")]
 impl UmfpackLu {
     fn factor(matrix: &SparseMatrix) -> Result<Self, String> {
         use russell_sparse::prelude::{ComplexCooMatrix, ComplexLinSolTrait, LinSolParams, Sym};
@@ -564,12 +270,12 @@ impl UmfpackLu {
     }
 }
 
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+#[cfg(feature = "umfpack-backend")]
 fn russell_complex(value: Complex64) -> russell_lab::Complex64 {
     russell_lab::Complex64::new(value.re, value.im)
 }
 
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+#[cfg(feature = "umfpack-backend")]
 fn num_complex(value: russell_lab::Complex64) -> Complex64 {
     Complex64::new(value.re, value.im)
 }
@@ -584,8 +290,7 @@ struct SparseLu {
 
 impl SparseLu {
     fn factor(matrix: &SparseMatrix) -> Result<Self, String> {
-        // Native sparse LU is the fallback linear solve used by both the native
-        // Arnoldi loop and the ARPACK-without-UMFPACK path. Validate pivots here
+        // Native sparse LU is the fallback linear solve. Validate pivots here
         // so `solve` can assume the factors are usable.
         if matrix.rows != matrix.cols {
             return Err("LU factorization requires a square matrix".to_string());

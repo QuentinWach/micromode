@@ -13,7 +13,7 @@ pip install micromode
 ## Supported Platforms
 
 The default Python package uses the portable Rust sparse backend. It does not
-require ARPACK, SuiteSparse, BLAS, LAPACK, or a Fortran compiler at install
+require SuiteSparse, BLAS, LAPACK, or a Fortran compiler at install
 time.
 
 Published wheels are built for:
@@ -41,25 +41,24 @@ uv run maturin develop
 ```
 
 MicroMode also keeps an accelerated sparse backend behind explicit Rust
-features. That path uses ARPACK for Krylov iteration and SuiteSparse/UMFPACK for
-sparse LU factorization. It can be faster on larger grids, but source builds
-must provide the native system libraries:
+features. That path uses the native Rust Arnoldi iteration with
+SuiteSparse/UMFPACK for sparse LU factorization. It can be faster on larger
+grids, but source builds must provide the native system libraries:
 
 - Fortran compiler, such as `gfortran`
-- ARPACK
 - BLAS/LAPACK or OpenBLAS
 - SuiteSparse/UMFPACK
 
 To build the accelerated Python extension locally:
 
 ```bash
-uv run maturin develop --features extension-module,arpack-backend,umfpack-backend
+uv run maturin develop --features extension-module,umfpack-backend
 ```
 
 To test the accelerated Rust backend:
 
 ```bash
-cargo test --features arpack-backend,umfpack-backend
+cargo test --features umfpack-backend
 ```
 
 ## Why Use It?

@@ -14,8 +14,12 @@ build = "build.rs"
 name = "micromode_core"
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "eigensolver-backend-benchmark"
+path = "benchmarks/eigensolver_backend_benchmark.rs"
+required-features = ["umfpack-backend"]
+
 [dependencies]
-arpack-sys = { version = "0.0.2", optional = true }
 nalgebra = "0.33"
 num-complex = "0.4"
 pyo3 = { version = "0.23.5", optional = true }
@@ -25,7 +29,6 @@ russell_sparse = { version = "1.15.0", optional = true }
 
 [features]
 default = []
-arpack-backend = ["dep:arpack-sys"]
 umfpack-backend = ["dep:russell_lab", "dep:russell_sparse"]
 python = ["pyo3"]
 extension-module = ["python", "pyo3/extension-module"]

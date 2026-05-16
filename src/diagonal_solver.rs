@@ -1,10 +1,8 @@
-#[cfg(feature = "arpack-backend")]
-pub use crate::eigensolve::selected_sparse_shift_invert_arpack_eigenpairs;
-#[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
-pub use crate::eigensolve::selected_sparse_shift_invert_umfpack_eigenpairs;
+#[cfg(feature = "umfpack-backend")]
+pub use crate::eigensolve::selected_sparse_shift_invert_native_umfpack_eigenpairs;
 pub use crate::eigensolve::{
-    diagonal_eigs_to_effective_index, selected_sparse_shift_invert_eigenpairs, Eigenpair,
-    ShiftInvertOptions,
+    diagonal_eigs_to_effective_index, selected_sparse_shift_invert_eigenpairs,
+    selected_sparse_shift_invert_native_eigenpairs, Eigenpair, ShiftInvertOptions,
 };
 pub use crate::mode_solver::{
     solve_diagonal_sparse, solve_tensorial_sparse, DiagonalSolveResult, SolveDiagnostics,
@@ -104,43 +102,7 @@ mod sparse_tests {
         }
     }
 
-    #[cfg(feature = "arpack-backend")]
-    #[test]
-    fn arpack_shift_invert_eigenpairs_have_small_residuals() {
-        let shape = (3, 4);
-        let dlf = (vec![0.17, 0.19, 0.23], vec![0.11, 0.13, 0.17, 0.21]);
-        let dlb = (vec![0.16, 0.18, 0.21], vec![0.10, 0.12, 0.15, 0.19]);
-        let sparse_derivatives = derivatives::create_d_matrices_sparse(
-            shape,
-            (&dlf.0, &dlf.1),
-            (&dlb.0, &dlb.1),
-            (false, false),
-        );
-        let eps = sample_tensor(shape, 2.0);
-        let mu = sample_tensor(shape, 1.0);
-        let sparse = assemble_sparse_diagonal_operators(&eps, &mu, &sparse_derivatives);
-        let guess = Complex64::new(-(2.2 * 2.2), 0.0);
-
-        let actual = selected_sparse_shift_invert_arpack_eigenpairs(
-            &sparse.mat,
-            2,
-            guess,
-            None,
-            ShiftInvertOptions {
-                krylov_dim: 20,
-                tolerance: 1e-11,
-            },
-        )
-        .unwrap();
-
-        assert_eq!(actual.len(), 2);
-        for actual in &actual {
-            let residual = sparse_residual_norm(&sparse.mat, &actual.vector, actual.value);
-            assert!(residual < 1e-8, "residual was {residual}");
-        }
-    }
-
-    #[cfg(all(feature = "arpack-backend", feature = "umfpack-backend"))]
+    #[cfg(feature = "umfpack-backend")]
     #[test]
     fn umfpack_shift_invert_eigenpairs_have_small_residuals() {
         let shape = (3, 4);
@@ -157,7 +119,7 @@ mod sparse_tests {
         let sparse = assemble_sparse_diagonal_operators(&eps, &mu, &sparse_derivatives);
         let guess = Complex64::new(-(2.2 * 2.2), 0.0);
 
-        let actual = selected_sparse_shift_invert_umfpack_eigenpairs(
+        let actual = selected_sparse_shift_invert_native_umfpack_eigenpairs(
             &sparse.mat,
             2,
             guess,

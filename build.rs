@@ -3,7 +3,7 @@ use std::path::Path;
 fn main() {
     #[cfg(target_os = "macos")]
     {
-        if std::env::var_os("CARGO_FEATURE_ARPACK_BACKEND").is_none() {
+        if std::env::var_os("CARGO_FEATURE_UMFPACK_BACKEND").is_none() {
             return;
         }
         for candidate in [
@@ -13,8 +13,6 @@ fn main() {
             "/usr/local/opt/lapack/lib",
             "/opt/homebrew/opt/openblas/lib",
             "/usr/local/opt/openblas/lib",
-            "/opt/homebrew/opt/arpack/lib",
-            "/usr/local/opt/arpack/lib",
             "/opt/homebrew/opt/suite-sparse/lib",
             "/usr/local/opt/suite-sparse/lib",
         ] {
