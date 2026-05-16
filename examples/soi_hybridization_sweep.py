@@ -89,9 +89,9 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path(__file__).resolve().parent / "soi_hybridization_outputs",
     )
-    parser.add_argument("--width-start", type=float, default=0.3)
+    parser.add_argument("--width-start", type=float, default=0.2)
     parser.add_argument("--width-stop", type=float, default=2.0)
-    parser.add_argument("--width-step", type=float, default=0.1)
+    parser.add_argument("--width-step", type=float, default=0.025)
     parser.add_argument("--x-step", type=float, default=0.05)
     parser.add_argument("--y-step", type=float, default=0.04)
     parser.add_argument("--domain-width", type=float, default=4.0)
@@ -214,16 +214,15 @@ def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
         )
         colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
         plotted_modes = list(range(min(4, sweep.num_modes)))
+        line_width = 2.025
 
         for mode_index in plotted_modes:
+            x_smooth, y_smooth = smooth_line(sweep.values, sweep.n_eff[:, mode_index])
             axes[0].plot(
-                sweep.values,
-                sweep.n_eff[:, mode_index],
+                x_smooth,
+                y_smooth,
                 color=colors[mode_index],
-                marker="o",
-                markersize=3.0,
-                markeredgewidth=0.0,
-                linewidth=1.35,
+                linewidth=line_width,
                 label=f"mode {mode_index}",
             )
         axes[0].set_xlabel("ridge width (um)")
@@ -231,51 +230,120 @@ def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
         axes[0].grid(color="#d9dde3", linewidth=0.55)
         axes[0].legend(ncol=2, frameon=False, handlelength=1.8, columnspacing=1.1)
 
-        highlighted = [index for index in (0, 1, 2) if index < sweep.num_modes]
+        highlighted = [index for index in (0, 1, 2, 3) if index < sweep.num_modes]
         if not highlighted:
             highlighted = [0]
         for mode_index in highlighted:
+            x_smooth, y_smooth = smooth_line(sweep.values, pol["te"][:, mode_index], y_limits=(0.0, 1.0))
             axes[1].plot(
-                sweep.values,
-                pol["te"][:, mode_index],
-                marker="o",
-                markersize=3.0,
-                markeredgewidth=0.0,
-                linewidth=1.35,
+                x_smooth,
+                y_smooth,
+                linewidth=line_width,
                 color=colors[mode_index],
                 label=f"mode {mode_index}",
             )
-            axes[1].plot(
-                sweep.values,
-                pol["tm"][:, mode_index],
-                linestyle=(0, (3.2, 2.0)),
-                linewidth=1.1,
-                color=colors[mode_index],
-            )
         axes[1].set_xlabel("ridge width (um)")
-        axes[1].set_ylabel("field fraction")
+        axes[1].set_ylabel("TE fraction")
         axes[1].set_ylim(-0.04, 1.04)
         axes[1].grid(color="#d9dde3", linewidth=0.55)
 
-        mode_handles = [Line2D([0], [0], color=colors[index], lw=1.6, marker="o", markersize=3.2) for index in highlighted]
-        style_handles = [
-            Line2D([0], [0], color="#333333", lw=1.5, label="TE"),
-            Line2D([0], [0], color="#333333", lw=1.2, linestyle=(0, (3.2, 2.0)), label="TM"),
-        ]
-        legend1 = axes[1].legend(
+        for ax in axes:
+            ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
+            ax.margins(x=0)
+
+        mode_handles = [Line2D([0], [0], color=colors[index], lw=2.4) for index in highlighted]
+        axes[1].legend(
             mode_handles,
             [f"mode {index}" for index in highlighted],
             frameon=False,
-            loc="upper right",
+            loc="lower right",
             handlelength=1.8,
         )
-        axes[1].add_artist(legend1)
-        axes[1].legend(handles=style_handles, frameon=False, loc="lower right", handlelength=2.0)
 
         add_panel_label(axes[0], "a")
         add_panel_label(axes[1], "b")
         save_figure(fig, path)
         plt.close(fig)
+
+
+def smooth_line(
+    x: np.ndarray,
+    y: np.ndarray,
+    *,
+    samples_per_interval: int = 10,
+    y_limits: tuple[float, float] | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Shape-preserving cubic interpolation for figure rendering."""
+
+    x_values = np.asarray(x, dtype=float)
+    y_values = np.asarray(y, dtype=float)
+    finite = np.isfinite(x_values) & np.isfinite(y_values)
+    x_values = x_values[finite]
+    y_values = y_values[finite]
+    if len(x_values) < 3:
+        return x_values, y_values
+
+    order = np.argsort(x_values)
+    x_values = x_values[order]
+    y_values = y_values[order]
+    unique = np.concatenate(([True], np.diff(x_values) > 0.0))
+    x_values = x_values[unique]
+    y_values = y_values[unique]
+    if len(x_values) < 3:
+        return x_values, y_values
+
+    slopes = pchip_slopes(x_values, y_values)
+    dense_count = max(300, samples_per_interval * (len(x_values) - 1) + 1)
+    x_dense = np.linspace(float(x_values[0]), float(x_values[-1]), dense_count)
+    y_dense = evaluate_hermite(x_values, y_values, slopes, x_dense)
+    if y_limits is not None:
+        y_dense = np.clip(y_dense, y_limits[0], y_limits[1])
+    return x_dense, y_dense
+
+
+def pchip_slopes(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    h = np.diff(x)
+    delta = np.diff(y) / h
+    slopes = np.zeros_like(y)
+
+    for index in range(1, len(y) - 1):
+        if delta[index - 1] == 0.0 or delta[index] == 0.0 or np.sign(delta[index - 1]) != np.sign(delta[index]):
+            slopes[index] = 0.0
+        else:
+            weight_1 = 2.0 * h[index] + h[index - 1]
+            weight_2 = h[index] + 2.0 * h[index - 1]
+            slopes[index] = (weight_1 + weight_2) / (weight_1 / delta[index - 1] + weight_2 / delta[index])
+
+    slopes[0] = pchip_endpoint_slope(h[0], h[1], delta[0], delta[1])
+    slopes[-1] = pchip_endpoint_slope(h[-1], h[-2], delta[-1], delta[-2])
+    return slopes
+
+
+def pchip_endpoint_slope(h0: float, h1: float, delta0: float, delta1: float) -> float:
+    slope = ((2.0 * h0 + h1) * delta0 - h0 * delta1) / (h0 + h1)
+    if np.sign(slope) != np.sign(delta0):
+        return 0.0
+    if np.sign(delta0) != np.sign(delta1) and abs(slope) > abs(3.0 * delta0):
+        return 3.0 * delta0
+    return slope
+
+
+def evaluate_hermite(x: np.ndarray, y: np.ndarray, slopes: np.ndarray, x_dense: np.ndarray) -> np.ndarray:
+    interval_indices = np.searchsorted(x, x_dense, side="right") - 1
+    interval_indices = np.clip(interval_indices, 0, len(x) - 2)
+    x0 = x[interval_indices]
+    x1 = x[interval_indices + 1]
+    y0 = y[interval_indices]
+    y1 = y[interval_indices + 1]
+    m0 = slopes[interval_indices]
+    m1 = slopes[interval_indices + 1]
+    h = x1 - x0
+    t = (x_dense - x0) / h
+    h00 = (2.0 * t**3) - (3.0 * t**2) + 1.0
+    h10 = (t**3) - (2.0 * t**2) + t
+    h01 = (-2.0 * t**3) + (3.0 * t**2)
+    h11 = (t**3) - (t**2)
+    return h00 * y0 + h10 * h * m0 + h01 * y1 + h11 * h * m1
 
 
 def plot_profiles(path: Path, widths: np.ndarray, results: tuple[mm.Result, ...], eps_grids: list[np.ndarray]) -> None:
