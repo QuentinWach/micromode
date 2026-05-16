@@ -120,9 +120,38 @@ def soi_ridge_materials(
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
     xx, yy = np.meshgrid(x, y, indexing="ij")
     eps = np.where(yy < 0.0, N_SIO2**2, N_AIR**2).astype(np.complex128)
-    silicon = (np.abs(xx) <= 0.5 * width) & (0.0 <= yy) & (yy <= film_thickness)
-    eps[silicon] = N_SI**2
+    silicon_fill = rectangle_fill_fraction(
+        x_edges=x_edges,
+        y_edges=y_edges,
+        x_min=-0.5 * width,
+        x_max=0.5 * width,
+        y_min=0.0,
+        y_max=film_thickness,
+    )
+    eps = eps * (1.0 - silicon_fill) + N_SI**2 * silicon_fill
     return mm.Materials.from_diagonal(eps_xx=eps, x_edges=x_edges, y_edges=y_edges), eps
+
+
+def rectangle_fill_fraction(
+    *,
+    x_edges: np.ndarray,
+    y_edges: np.ndarray,
+    x_min: float,
+    x_max: float,
+    y_min: float,
+    y_max: float,
+) -> np.ndarray:
+    x_overlap = interval_fill_fraction(x_edges, x_min, x_max)
+    y_overlap = interval_fill_fraction(y_edges, y_min, y_max)
+    return np.outer(x_overlap, y_overlap)
+
+
+def interval_fill_fraction(edges: np.ndarray, lower: float, upper: float) -> np.ndarray:
+    cell_lower = edges[:-1]
+    cell_upper = edges[1:]
+    overlap = np.clip(np.minimum(cell_upper, upper) - np.maximum(cell_lower, lower), 0.0, None)
+    widths = np.maximum(cell_upper - cell_lower, np.finfo(float).eps)
+    return overlap / widths
 
 
 def write_summary(path: Path, sweep: mm.Sweep, args: argparse.Namespace) -> Path:
@@ -184,12 +213,13 @@ def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
             gridspec_kw={"width_ratios": (1.08, 1.0)},
         )
         colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
+        plotted_modes = list(range(min(4, sweep.num_modes)))
 
-        for mode_index, color in enumerate(colors):
+        for mode_index in plotted_modes:
             axes[0].plot(
                 sweep.values,
                 sweep.n_eff[:, mode_index],
-                color=color,
+                color=colors[mode_index],
                 marker="o",
                 markersize=3.0,
                 markeredgewidth=0.0,
