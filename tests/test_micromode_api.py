@@ -247,6 +247,28 @@ def test_y_normal_solve_returns_global_component_names():
     assert np.linalg.norm(data.field_components["Ez"].values) > 0
 
 
+def test_y_normal_power_overlap_is_positive():
+    z_edges = np.linspace(-1.0, 1.0, 9)
+    z_centers = (z_edges[:-1] + z_edges[1:]) / 2
+    eps = np.where(np.abs(z_centers) <= 0.3, 3.4**2, 1.44**2)
+
+    data = mm.solve_slice(
+        eps_xx=eps,
+        coord_edges=z_edges,
+        axis="y",
+        invariant_width=0.5,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        normal_axis=1,
+        krylov_dim=16,
+    )
+
+    power = data.overlap(mode_index=0, kind="power", normalize=False)
+    assert power.real > 0
+    assert abs(abs(power) - 1.0) < 1e-10
+
+
 def test_materials_subpixel_averaging_helpers():
     x_edges = np.linspace(-1.0, 1.0, 3)
     y_edges = np.linspace(-0.5, 0.5, 3)

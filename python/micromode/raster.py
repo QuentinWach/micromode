@@ -685,7 +685,10 @@ def _local_fields_to_global(fields: dict[str, np.ndarray], *, normal_axis: int) 
             local_name = f"{prefix}{axis_names[local_axis]}"
             global_name = f"{prefix}{axis_names[global_axis]}"
             if local_name in fields:
-                out[global_name] = fields[local_name]
+                # For y-normal planes the local (x, z, y) order is left-handed;
+                # flipping the local-y tangential component restores physical +y flux.
+                sign = -1.0 if normal_axis == 1 and local_axis == 1 else 1.0
+                out[global_name] = sign * fields[local_name]
     return out
 
 
