@@ -183,7 +183,7 @@ where
             Ok(values.to_vec())
         })
         .unwrap_or_else(|| Ok(default_initial_vector(n)))?;
-    let mut q_vectors = vec![normalize_complex_vector(start)];
+    let mut q_basis = ArnoldiBasis::with_first(normalize_complex_vector(start), krylov_dim + 1);
     let mut hessenberg = DMatrix::<Complex64>::zeros(krylov_dim + 1, krylov_dim);
     let mut actual_dim = 0usize;
 
@@ -191,21 +191,23 @@ where
         // Native Arnoldi fallback with one reorthogonalization pass.
         let solve_start = profile.as_ref().map(|_| Instant::now());
         let mut work = vec![Complex64::new(0.0, 0.0); n];
-        solve(&q_vectors[col], &mut work)?;
+        solve(q_basis.vector(col), &mut work)?;
         if let (Some(profile), Some(start)) = (profile.as_mut(), solve_start) {
             profile.linear_solves += start.elapsed();
             profile.solve_calls += 1;
         }
         let orthogonalization_start = profile.as_ref().map(|_| Instant::now());
         for row in 0..=col {
-            let projection = complex_dot(&q_vectors[row], &work);
+            let basis_vector = q_basis.vector(row);
+            let projection = complex_dot(basis_vector, &work);
             hessenberg[(row, col)] = projection;
-            axpy(&mut work, &q_vectors[row], -projection);
+            axpy(&mut work, basis_vector, -projection);
         }
         for row in 0..=col {
-            let projection = complex_dot(&q_vectors[row], &work);
+            let basis_vector = q_basis.vector(row);
+            let projection = complex_dot(basis_vector, &work);
             hessenberg[(row, col)] += projection;
-            axpy(&mut work, &q_vectors[row], -projection);
+            axpy(&mut work, basis_vector, -projection);
         }
         let norm = vector_norm(&work);
         actual_dim = col + 1;
@@ -223,7 +225,7 @@ where
         if checkpoint_due {
             let candidates = candidate_eigenpairs_from_hessenberg(
                 mat,
-                &q_vectors,
+                &q_basis,
                 &hessenberg,
                 actual_dim,
                 num_modes,
@@ -246,7 +248,7 @@ where
             break;
         }
         scale_vector(&mut work, Complex64::new(1.0 / norm, 0.0));
-        q_vectors.push(work);
+        q_basis.push(work);
     }
     if let Some(profile) = profile.as_mut() {
         profile.arnoldi_steps = actual_dim;
@@ -254,7 +256,7 @@ where
 
     candidate_eigenpairs_from_hessenberg(
         mat,
-        &q_vectors,
+        &q_basis,
         &hessenberg,
         actual_dim,
         num_modes,
@@ -267,7 +269,7 @@ where
 
 fn candidate_eigenpairs_from_hessenberg(
     mat: &SparseMatrix,
-    q_vectors: &[Vec<Complex64>],
+    q_basis: &ArnoldiBasis,
     hessenberg: &DMatrix<Complex64>,
     actual_dim: usize,
     num_modes: usize,
@@ -314,7 +316,7 @@ fn candidate_eigenpairs_from_hessenberg(
     for (lambda, theta) in theta_candidates.into_iter().take(reconstruction_count) {
         let ritz_start = profile.as_ref().map(|_| Instant::now());
         let coeffs = null_vector_for_eigenvalue(&h_square, theta)?;
-        let vector = combine_ritz_vector(&q_vectors, &coeffs);
+        let vector = combine_ritz_vector(q_basis, &coeffs);
         if let (Some(profile), Some(start)) = (profile.as_mut(), ritz_start) {
             profile.ritz_reconstruction += start.elapsed();
         }
@@ -375,6 +377,31 @@ fn candidates_stable(
             .iter()
             .zip(candidates)
             .all(|(previous, candidate)| (*previous - candidate.value).norm() <= tolerance)
+}
+
+#[derive(Clone, Debug)]
+struct ArnoldiBasis {
+    n: usize,
+    values: Vec<Complex64>,
+}
+
+impl ArnoldiBasis {
+    fn with_first(first: Vec<Complex64>, capacity: usize) -> Self {
+        let n = first.len();
+        let mut values = Vec::with_capacity(n * capacity);
+        values.extend_from_slice(&first);
+        Self { n, values }
+    }
+
+    fn vector(&self, index: usize) -> &[Complex64] {
+        let start = index * self.n;
+        &self.values[start..start + self.n]
+    }
+
+    fn push(&mut self, vector: Vec<Complex64>) {
+        assert_eq!(vector.len(), self.n);
+        self.values.extend_from_slice(&vector);
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -602,11 +629,11 @@ fn default_initial_vector(n: usize) -> Vec<Complex64> {
         .collect()
 }
 
-fn combine_ritz_vector(q_vectors: &[Vec<Complex64>], coeffs: &[Complex64]) -> Vec<Complex64> {
-    let n = q_vectors[0].len();
+fn combine_ritz_vector(q_basis: &ArnoldiBasis, coeffs: &[Complex64]) -> Vec<Complex64> {
+    let n = q_basis.n;
     let mut out = vec![Complex64::new(0.0, 0.0); n];
-    for (basis, coeff) in q_vectors.iter().zip(coeffs) {
-        axpy(&mut out, basis, *coeff);
+    for (basis_index, coeff) in coeffs.iter().copied().enumerate() {
+        axpy(&mut out, q_basis.vector(basis_index), coeff);
     }
     normalize_complex_vector(out)
 }
