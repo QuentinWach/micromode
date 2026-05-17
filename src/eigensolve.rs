@@ -230,12 +230,30 @@ where
     if let (Some(profile), Some(start)) = (profile.as_mut(), hessenberg_start) {
         profile.hessenberg_eigensolve += start.elapsed();
     }
-    let mut candidates = Vec::new();
+    let mut theta_candidates = Vec::new();
     for theta in theta_values.iter().copied() {
         if theta.norm() <= options.tolerance {
             continue;
         }
         let lambda = guess_value + Complex64::new(1.0, 0.0) / theta;
+        theta_candidates.push((lambda, theta));
+    }
+    theta_candidates.sort_by(|(left, _), (right, _)| {
+        let left_distance = (*left - guess_value).norm();
+        let right_distance = (*right - guess_value).norm();
+        left_distance
+            .partial_cmp(&right_distance)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    // Residuals are only a tie-breaker after shift distance. Avoid the
+    // SVD-based full-vector reconstruction for distant projected eigenvalues
+    // that cannot survive the final truncation.
+    let reconstruction_count = theta_candidates
+        .len()
+        .min((num_modes * 2).max(num_modes + 2));
+    let mut candidates = Vec::with_capacity(reconstruction_count);
+    for (lambda, theta) in theta_candidates.into_iter().take(reconstruction_count) {
         let ritz_start = profile.as_ref().map(|_| Instant::now());
         let coeffs = null_vector_for_eigenvalue(&h_square, theta)?;
         let vector = combine_ritz_vector(&q_vectors, &coeffs);
