@@ -252,8 +252,6 @@ def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
             handlelength=1.8,
         )
 
-        add_panel_label(axes[0], "a")
-        add_panel_label(axes[1], "b")
         save_figure(fig, path)
         plt.close(fig)
 
@@ -516,19 +514,6 @@ def plot_eps_contours(ax, coords: tuple[np.ndarray, np.ndarray], eps: np.ndarray
     level = 0.5 * (float(np.nanmin(values)) + float(np.nanmax(values)))
     ax.contour(x, y, values.T, levels=[level], colors="black", linewidths=2.0, alpha=0.7)
     ax.contour(x, y, values.T, levels=[level], colors="white", linewidths=0.9, alpha=0.95)
-
-
-def add_panel_label(ax, label: str) -> None:
-    ax.text(
-        -0.12,
-        1.08,
-        label,
-        transform=ax.transAxes,
-        ha="left",
-        va="top",
-        fontsize=10,
-        fontweight="bold",
-    )
 
 
 def save_figure(fig, path: Path) -> None:

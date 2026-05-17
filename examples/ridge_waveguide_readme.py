@@ -1,8 +1,8 @@
-"""Ridge waveguide example used by the README.
+"""Angled slab waveguide example used by the README.
 
-The geometry is a compact SOI rib waveguide. It is MicroMode-native: the
-structure is rasterized into a material grid first, then the solver receives
-only arrays.
+The geometry is a compact silicon slab with 80 degree sidewalls on an oxide
+substrate and air around it. It is MicroMode-native: the structure is rasterized
+into a material grid first, then the solver receives only arrays.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def publication_style() -> dict[str, object]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Solve and plot a rasterized ridge waveguide.")
+    parser = argparse.ArgumentParser(description="Solve and plot a rasterized angled slab waveguide.")
     parser.add_argument("--step", type=float, default=0.02, help="Grid step in microns.")
     parser.add_argument("--subpixels", type=int, default=7, help="Subpixel samples per axis for material averaging.")
     parser.add_argument("--output-dir", type=Path, default=Path("examples/ridge_waveguide_outputs"))
@@ -69,31 +69,26 @@ def main() -> None:
 
 
 def ridge_waveguide_materials(step: float = 0.02, subpixels: int = 7) -> tuple[mm.Materials, np.ndarray]:
-    """Rasterize an SOI rib waveguide with subpixel material averaging."""
+    """Rasterize a silicon slab with 80 degree sidewalls and subpixel averaging."""
 
-    film_thickness = 0.22
-    slab_height = 0.09
+    slab_thickness = 0.22
     top_width = 0.50
-    sidewall_angle_deg = 82.0
+    sidewall_angle_deg = 80.0
     substrate_height = 1.0
     clad_height = 0.8
     domain_width = 3.0
 
     x_edges = centered_edges(width=domain_width, step=step)
-    y_edges = offset_edges(lower=-substrate_height, upper=film_thickness + clad_height, step=step)
+    y_edges = offset_edges(lower=-substrate_height, upper=slab_thickness + clad_height, step=step)
     sample_x, sample_y = subpixel_centers(x_edges, y_edges, subpixels=subpixels)
 
     eps_samples = np.full(sample_x.shape, N_AIR**2, dtype=np.complex128)
     eps_samples[sample_y < 0.0] = N_SIO2**2
 
-    silicon = (sample_y >= 0.0) & (sample_y < slab_height)
-
-    ridge_height = film_thickness - slab_height
-    bottom_extra = ridge_height / np.tan(np.deg2rad(sidewall_angle_deg))
-    vertical_fraction = np.clip((sample_y - slab_height) / ridge_height, 0.0, 1.0)
+    bottom_extra = slab_thickness / np.tan(np.deg2rad(sidewall_angle_deg))
+    vertical_fraction = np.clip(sample_y / slab_thickness, 0.0, 1.0)
     half_width = 0.5 * top_width + (1.0 - vertical_fraction) * bottom_extra
-    ridge = (sample_y >= slab_height) & (sample_y < film_thickness) & (np.abs(sample_x) <= half_width)
-    silicon |= ridge
+    silicon = (sample_y >= 0.0) & (sample_y < slab_thickness) & (np.abs(sample_x) <= half_width)
     eps_samples[silicon] = N_SI**2
 
     materials = mm.Materials.from_subpixel_diagonal(
@@ -152,7 +147,7 @@ def plot_index(materials: mm.Materials, eps: np.ndarray, path: Path) -> None:
         )
         draw_material_outline(ax, x, y, eps, color="black", linewidth=1.3)
         draw_material_outline(ax, x, y, eps, color="white", linewidth=0.55)
-        ax.set_title("SOI rib waveguide")
+        ax.set_title("Angled slab on substrate")
         ax.set_xlabel("x (um)")
         ax.set_ylabel("y (um)")
         ax.set_xlim(-0.9, 0.9)
@@ -198,62 +193,43 @@ def plot_modes(materials: mm.Materials, eps: np.ndarray, data: mm.Result, path: 
 
 
 def plot_readme_figure(materials: mm.Materials, eps: np.ndarray, data: mm.Result, path: Path) -> None:
-    """Create a compact presentation figure for the README."""
+    """Create a 5:3 presentation figure showing fundamental field components."""
 
+    style = publication_style()
+    style["savefig.bbox"] = None
     x_edges = np.asarray(materials.grid.x_edges, dtype=float)
     y_edges = np.asarray(materials.grid.y_edges, dtype=float)
     x = 0.5 * (x_edges[:-1] + x_edges[1:])
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
     extent = (x_edges[0], x_edges[-1], y_edges[0], y_edges[-1])
-    panels = (
-        ("permittivity", "eps", 0),
-        ("mode 0 |E|", None, 0),
-        ("mode 0 Ex", "Ex", 0),
-        ("mode 1 |E|", None, 1),
-        ("mode 1 Ex", "Ex", 1),
-    )
+    components = ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")
+    n_eff = complex(np.asarray(data.n_complex.values)[0, 0])
 
-    with plt.rc_context(publication_style()):
-        fig, axes = plt.subplots(
-            1, len(panels), figsize=(7.6, 1.95), constrained_layout=False, sharex=True, sharey=True
-        )
-        fig.subplots_adjust(left=0.035, right=0.995, bottom=0.12, top=0.82, wspace=0.10)
-        for ax, (title, component, mode_index) in zip(axes, panels, strict=True):
-            values, cmap, vmin, vmax = readme_panel_values(eps, data, component=component, mode_index=mode_index)
+    with plt.rc_context(style):
+        fig, axes = plt.subplots(3, 2, figsize=(7.5, 4.5), constrained_layout=False, sharex=True, sharey=True)
+        fig.subplots_adjust(left=0.025, right=0.995, bottom=0.035, top=0.90, wspace=0.04, hspace=0.20)
+        fig.suptitle(f"Fundamental mode, n={format_complex(n_eff, precision=4)}", y=0.985)
+        for ax, component in zip(axes.ravel(), components, strict=True):
+            values = np.asarray(data.field_components[component].isel(f=0, mode_index=0).values).squeeze()
+            plot_values = normalize_signed(values.real)
             ax.imshow(
-                values.T,
+                plot_values.T,
                 origin="lower",
                 extent=extent,
                 aspect="equal",
-                cmap=cmap,
-                vmin=vmin,
-                vmax=vmax,
+                cmap="RdBu_r",
+                vmin=-1.0,
+                vmax=1.0,
                 interpolation="bicubic",
             )
-            if component == "eps":
-                draw_material_outline(ax, x, y, eps, color="black", linewidth=1.2)
-                draw_material_outline(ax, x, y, eps, color="white", linewidth=0.5)
-            else:
-                outline_color = "white" if cmap == "magma" else "#111827"
-                draw_material_outline(ax, x, y, eps, color=outline_color, linewidth=0.9)
-            ax.set_title(title)
+            draw_material_outline(ax, x, y, eps, color="white", linewidth=0.9)
+            draw_material_outline(ax, x, y, eps, color="#111827", linewidth=0.35)
+            ax.set_title(f"Re({component})", pad=3)
             ax.set_xlim(-0.9, 0.9)
             ax.set_ylim(-0.28, 0.42)
             ax.set_xticks([])
             ax.set_yticks([])
             ax.tick_params(bottom=False, left=False, labelbottom=False, labelleft=False)
-            if component != "eps":
-                ax.text(
-                    0.06,
-                    0.90,
-                    f"n={data.n_eff.values[0, mode_index]:.4f}",
-                    transform=ax.transAxes,
-                    ha="left",
-                    va="top",
-                    color="white" if cmap == "magma" else "black",
-                    alpha=0.5,
-                    fontsize=8,
-                )
         save_figure(fig, path)
         plt.close(fig)
 
@@ -267,27 +243,9 @@ def draw_material_outline(ax, x: np.ndarray, y: np.ndarray, eps: np.ndarray, **k
     ax.contour(x, y, eps.real.T, levels=levels, **kwargs)
 
 
-def readme_panel_values(
-    eps: np.ndarray,
-    data: mm.Result,
-    *,
-    component: str | None,
-    mode_index: int,
-) -> tuple[np.ndarray, str, float, float]:
-    if component == "eps":
-        return eps.real, "Greys", N_AIR**2, N_SI**2
-    if component is None:
-        values = np.sqrt(
-            sum(
-                np.abs(np.asarray(data.field_components[name].isel(f=0, mode_index=mode_index).values).squeeze()) ** 2
-                for name in ("Ex", "Ey", "Ez")
-            )
-        )
-        scale = max(float(np.nanmax(values)), np.finfo(float).eps)
-        return values / scale, "magma", 0.0, 1.0
-
-    values = np.asarray(data.field_components[component].isel(f=0, mode_index=mode_index).values).squeeze().real
-    return normalize_signed(values), "RdBu_r", -1.0, 1.0
+def format_complex(value: complex, *, precision: int) -> str:
+    sign = "+" if value.imag >= 0.0 else "-"
+    return f"{value.real:.{precision}f}{sign}{abs(value.imag):.{precision}g}i"
 
 
 def normalize_signed(values: np.ndarray) -> np.ndarray:

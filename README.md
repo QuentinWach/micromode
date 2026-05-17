@@ -57,6 +57,34 @@ data.plot_field("Ex", mode_index=0)
 data.to_hdf5("modes.h5")
 ```
 
+## Examples
+
+
+### Ridge Modes
+![Ridge Modes](docs/assets/ridge_modes.png)
+
+The ridge modes example rasterizes an angled silicon slab on an oxide substrate
+with air cladding, then solves the fundamental guided fields directly from the
+material grid. It shows the real electric and magnetic field components with
+the material outline overlaid.
+
+```bash
+uv run --extra dev python examples/ridge_waveguide_readme.py
+```
+
+
+### Hybridization Sweep
+![Hybridization sweep example](docs/assets/hybridization_sweep.png)
+
+The SOI hybridization example sweeps the width of a 220 nm silicon ridge and
+solves several modes at each step. It shows how nearby modes exchange character
+as the geometry changes by plotting effective index and TE fraction across the
+sweep, then rendering representative field profiles.
+
+```bash
+uv run --extra dev python examples/soi_hybridization_sweep.py
+```
+
 
 ## Physics
 
