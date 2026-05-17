@@ -58,7 +58,7 @@ data.to_hdf5("modes.h5")
 ```
 
 
-## Physics Model
+## Physics
 
 MicroMode solves the source-free frequency-domain Maxwell equations on a
 rasterized Yee mode plane,
@@ -68,12 +68,7 @@ $$
 \qquad
 \nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},
 $$
-
-with modal fields
-
-$$
-\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.
-$$
+with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
 
 On diagonal material grids this becomes a transverse eigenproblem,
 
@@ -91,7 +86,7 @@ the public solver controls are summarized in
 [docs/mode-solver-methods.md](docs/mode-solver-methods.md).
 
 
-## High Performance
+## Performance
 
 MicroMode is designed to make high-performance mode solving available without
 requiring users to install external solver stacks. The production backend is a
@@ -120,13 +115,3 @@ around the requested effective index. The Arnoldi stage uses
 [Ritz-pair](https://en.wikipedia.org/wiki/Ritz_method) checkpointing, early
 stopping once requested modes are stable, and selective Ritz vector
 reconstruction so work is spent on the modes that will actually be returned.
-
-For local performance checks, use the backend benchmark:
-
-```bash
-uv run python benchmarks/micromode_backend_benchmark.py --grid 20x14 --grid 32x22
-```
-
-It records backend name, operator size, nonzero count, residuals, elapsed time,
-and solved effective indices so timing claims can be tied to a specific machine,
-commit, and problem shape.
