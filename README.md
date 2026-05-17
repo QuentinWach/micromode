@@ -68,6 +68,7 @@ $$
 \qquad
 \nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},
 $$
+
 with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
 
 On diagonal material grids this becomes a transverse eigenproblem,
