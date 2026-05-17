@@ -1,0 +1,2 @@
+fixtures/mode_solver/**/*.json text eol=lf
+fixtures/mode_solver/**/*.hdf5 binary
