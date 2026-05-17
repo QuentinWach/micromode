@@ -1,6 +1,6 @@
 # micromode
 
-An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[regular Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
 
 ```bash
 pip install micromode
@@ -8,7 +8,7 @@ pip install micromode
 
 [![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
 [![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
-![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)
+![Coverage](docs/assets/coverage.svg)
 [![PyPI](https://img.shields.io/pypi/v/micromode)](https://pypi.org/project/micromode/)
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 
@@ -121,12 +121,12 @@ around the requested effective index. The Arnoldi stage uses
 stopping once requested modes are stable, and selective Ritz vector
 reconstruction so work is spent on the modes that will actually be returned.
 
-On the repository benchmark problem, the **pure Rust backend** solves larger grids
-in the same performance class as the previous optional UMFPACK-backed path while
-remaining much easier to install and distribute. For example, a release build on
-an Apple Silicon development machine solves an `80x50` diagonal benchmark grid
-in roughly **`90 ms` for two modes** with residuals around **`1e-12`**. Exact
-timings depend on hardware and problem shape, but the important point is
-architectural: MicroMode keeps the **deployability of a pure Rust package**
-without giving up the sparse-solver performance expected for practical
-waveguide grids.
+For local performance checks, use the backend benchmark:
+
+```bash
+uv run python benchmarks/micromode_backend_benchmark.py --grid 20x14 --grid 32x22
+```
+
+It records backend name, operator size, nonzero count, residuals, elapsed time,
+and solved effective indices so timing claims can be tied to a specific machine,
+commit, and problem shape.

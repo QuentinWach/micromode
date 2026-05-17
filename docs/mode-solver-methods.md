@@ -21,7 +21,7 @@ returns a coordinate-aware `Result`.
 
 - `num_modes`: number of modes returned near the requested target.
 - `target_neff`: center of the shift-invert search. If omitted, MicroMode uses
-  the largest local material index as a practical guided-mode default.
+  a heuristic based on the largest absolute permittivity component.
 - `pml`: absorbing boundary thickness and stretch profile via `PmlSpec`.
 - `boundary`: low-edge PEC/PMC symmetry settings via `BoundarySpec`.
 - `direction`: `"+"` or `"-"` propagation; the backward solve flips the
