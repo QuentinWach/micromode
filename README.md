@@ -1,14 +1,16 @@
 # micromode
 
-An electromagnetic mode solver using the FDFD method on a regular Yee-grid, written in native Rust.
-
-[![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
-![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
 
 ```bash
 pip install micromode
 ```
+
+[![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
+![Coverage](docs/assets/coverage.svg)
+[![PyPI](https://img.shields.io/pypi/v/micromode)](https://pypi.org/project/micromode/)
+![Status](https://img.shields.io/badge/status-alpha-orange)
 
 
 ## Why Use It?
@@ -56,7 +58,35 @@ data.to_hdf5("modes.h5")
 ```
 
 
-## High Performance
+## Physics
+
+MicroMode solves the source-free frequency-domain Maxwell equations on a
+rasterized Yee mode plane,
+
+$$
+\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H},
+\qquad
+\nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},
+$$
+with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
+
+On diagonal material grids this becomes a transverse eigenproblem,
+
+$$
+A_\mathrm{diag}
+\begin{bmatrix}E_x\\E_y\end{bmatrix}
+=
+-n_\mathrm{eff}^2
+\begin{bmatrix}E_x\\E_y\end{bmatrix}
+$$
+
+while full tensor or transformed grids use a first-order tensorial form. The
+detailed derivation is in [docs/physics-model.md](docs/physics-model.md), and
+the public solver controls are summarized in
+[docs/mode-solver-methods.md](docs/mode-solver-methods.md).
+
+
+## Performance
 
 MicroMode is designed to make high-performance mode solving available without
 requiring users to install external solver stacks. The production backend is a
@@ -85,13 +115,3 @@ around the requested effective index. The Arnoldi stage uses
 [Ritz-pair](https://en.wikipedia.org/wiki/Ritz_method) checkpointing, early
 stopping once requested modes are stable, and selective Ritz vector
 reconstruction so work is spent on the modes that will actually be returned.
-
-On the repository benchmark problem, the **pure Rust backend** solves larger grids
-in the same performance class as the previous optional UMFPACK-backed path while
-remaining much easier to install and distribute. For example, a release build on
-an Apple Silicon development machine solves an `80x50` diagonal benchmark grid
-in roughly **`90 ms` for two modes** with residuals around **`1e-12`**. Exact
-timings depend on hardware and problem shape, but the important point is
-architectural: MicroMode keeps the **deployability of a pure Rust package**
-without giving up the sparse-solver performance expected for practical
-waveguide grids.
