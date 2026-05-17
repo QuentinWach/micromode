@@ -16,7 +16,7 @@ fn main() -> Result<(), String> {
     let target_neff = parse_f64_arg("--target-neff").unwrap_or(2.5);
 
     println!(
-        "grid,operator_size,operator_nnz,repeat,assembly_ms,total_ms,shift_diagonal_ms,amd_ordering_ms,lu_factorization_ms,linear_solves_ms,arnoldi_orthogonalization_ms,hessenberg_eigensolve_ms,ritz_reconstruction_ms,residuals_ms,sorting_ms,solve_calls,arnoldi_steps,candidate_count,returned_pairs,lu_l_nnz,lu_u_nnz,lu_fill_ratio,max_residual"
+        "grid,operator_size,operator_nnz,repeat,assembly_ms,total_ms,shift_diagonal_ms,amd_ordering_ms,lu_factorization_ms,lu_packing_ms,linear_solves_ms,arnoldi_orthogonalization_ms,hessenberg_eigensolve_ms,ritz_reconstruction_ms,residuals_ms,sorting_ms,solve_calls,arnoldi_steps,candidate_count,returned_pairs,lu_l_nnz,lu_u_nnz,lu_fill_ratio,max_residual"
     );
     for (nx, ny) in grids {
         let (warm_mat, warm_guess) = strip_operator(nx, ny, target_neff);
@@ -65,7 +65,7 @@ fn print_row(
     let lu_nnz = profile.lu_l_nnz + profile.lu_u_nnz;
     let fill_ratio = lu_nnz as f64 / operator_nnz.max(1) as f64;
     println!(
-        "{}x{},{},{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{},{},{},{:.3},{:.3e}",
+        "{}x{},{},{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{},{},{},{},{},{},{:.3},{:.3e}",
         nx,
         ny,
         operator_size,
@@ -76,6 +76,7 @@ fn print_row(
         ms(profile.shift_diagonal),
         ms(profile.amd_ordering),
         ms(profile.lu_factorization),
+        ms(profile.lu_packing),
         ms(profile.linear_solves),
         ms(profile.arnoldi_orthogonalization),
         ms(profile.hessenberg_eigensolve),

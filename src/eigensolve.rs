@@ -42,6 +42,7 @@ pub struct ShiftInvertProfile {
     pub shift_diagonal: Duration,
     pub amd_ordering: Duration,
     pub lu_factorization: Duration,
+    pub lu_packing: Duration,
     pub linear_solves: Duration,
     pub arnoldi_orthogonalization: Duration,
     pub hessenberg_eigensolve: Duration,
@@ -142,6 +143,7 @@ fn selected_sparse_shift_invert_native_eigenpairs_impl(
         profile.shift_diagonal += start.elapsed();
     }
     let factorization = SparseLu::factor_with_profile(&shifted, profile.as_deref_mut())?;
+    let mut solve_workspace = vec![Complex64::new(0.0, 0.0); mat.rows];
     selected_sparse_shift_invert_native_with_solver(
         mat,
         num_modes,
@@ -150,7 +152,7 @@ fn selected_sparse_shift_invert_native_eigenpairs_impl(
         options,
         "native_shift_invert",
         profile.as_deref_mut(),
-        |input| factorization.solve(input),
+        |input, output| factorization.solve_into(input, output, &mut solve_workspace),
     )
 }
 
@@ -165,7 +167,7 @@ fn selected_sparse_shift_invert_native_with_solver<F>(
     mut solve: F,
 ) -> Result<Vec<Eigenpair>, String>
 where
-    F: FnMut(&[Complex64]) -> Result<Vec<Complex64>, String>,
+    F: FnMut(&[Complex64], &mut [Complex64]) -> Result<(), String>,
 {
     let n = mat.rows;
     let krylov_dim = options.krylov_dim.min(n).max(num_modes + 2);
@@ -184,7 +186,8 @@ where
     for col in 0..krylov_dim {
         // Native Arnoldi fallback with one reorthogonalization pass.
         let solve_start = profile.as_ref().map(|_| Instant::now());
-        let mut work = solve(&q_vectors[col])?;
+        let mut work = vec![Complex64::new(0.0, 0.0); n];
+        solve(&q_vectors[col], &mut work)?;
         if let (Some(profile), Some(start)) = (profile.as_mut(), solve_start) {
             profile.linear_solves += start.elapsed();
             profile.solve_calls += 1;
@@ -303,10 +306,17 @@ where
 #[derive(Clone, Debug)]
 struct SparseLu {
     n: usize,
-    l: rlu::Matrix<usize, Complex64>,
-    u: rlu::Matrix<usize, Complex64>,
-    row_perm: Vec<Option<usize>>,
+    l: PackedTriangularMatrix,
+    u: PackedTriangularMatrix,
+    row_perm: Vec<usize>,
     col_perm: Option<Vec<usize>>,
+}
+
+#[derive(Clone, Debug)]
+struct PackedTriangularMatrix {
+    col_ptrs: Vec<usize>,
+    row_indices: Vec<usize>,
+    values: Vec<Complex64>,
 }
 
 impl SparseLu {
@@ -332,7 +342,7 @@ impl SparseLu {
             profile.amd_ordering += start.elapsed();
         }
         let factor_start = profile.as_ref().map(|_| Instant::now());
-        let (l, u, row_perm) = rlu::lu_decomposition(
+        let (l_columns, u_columns, row_perm) = rlu::lu_decomposition(
             matrix.rows,
             matrix.row_indices(),
             matrix.col_ptrs(),
@@ -344,11 +354,21 @@ impl SparseLu {
         );
         if let (Some(profile), Some(start)) = (profile.as_mut(), factor_start) {
             profile.lu_factorization += start.elapsed();
-            profile.lu_l_nnz = l.iter().map(Vec::len).sum();
-            profile.lu_u_nnz = u.iter().map(Vec::len).sum();
         }
         if row_perm.iter().any(|value| value.is_none()) {
             return Err("sparse LU failed to find a complete pivot set".to_string());
+        }
+        let row_perm = row_perm
+            .into_iter()
+            .map(|value| value.expect("validated pivot set"))
+            .collect();
+        let packing_start = profile.as_ref().map(|_| Instant::now());
+        let l = PackedTriangularMatrix::from_columns(l_columns);
+        let u = PackedTriangularMatrix::from_columns(u_columns);
+        if let (Some(profile), Some(start)) = (profile.as_mut(), packing_start) {
+            profile.lu_packing += start.elapsed();
+            profile.lu_l_nnz = l.nnz();
+            profile.lu_u_nnz = u.nnz();
         }
         Ok(Self {
             n: matrix.rows,
@@ -359,25 +379,83 @@ impl SparseLu {
         })
     }
 
-    fn solve(&self, rhs: &[Complex64]) -> Result<Vec<Complex64>, String> {
+    fn solve_into(
+        &self,
+        rhs: &[Complex64],
+        out: &mut [Complex64],
+        work: &mut [Complex64],
+    ) -> Result<(), String> {
         if rhs.len() != self.n {
             return Err("right-hand side length does not match LU size".to_string());
         }
-        let mut out = vec![Complex64::new(0.0, 0.0); self.n];
-        for (index, value) in rhs.iter().copied().enumerate() {
-            out[self.row_perm[index].expect("validated pivot set")] = value;
+        if out.len() != self.n || work.len() != self.n {
+            return Err("solve workspace length does not match LU size".to_string());
         }
-        rlu::lsolve(&self.l, &mut out);
-        rlu::usolve(&self.u, &mut out);
-        match &self.col_perm {
-            Some(col_perm) => {
-                let mut unpermuted = vec![Complex64::new(0.0, 0.0); self.n];
-                for (index, value) in out.into_iter().enumerate() {
-                    unpermuted[col_perm[index]] = value;
-                }
-                Ok(unpermuted)
+
+        if let Some(col_perm) = &self.col_perm {
+            for (index, value) in rhs.iter().copied().enumerate() {
+                work[self.row_perm[index]] = value;
             }
-            None => Ok(out),
+            self.l.lsolve(work);
+            self.u.usolve(work);
+            for (index, value) in work.iter().copied().enumerate() {
+                out[col_perm[index]] = value;
+            }
+        } else {
+            for (index, value) in rhs.iter().copied().enumerate() {
+                out[self.row_perm[index]] = value;
+            }
+            self.l.lsolve(out);
+            self.u.usolve(out);
+        }
+        Ok(())
+    }
+}
+
+impl PackedTriangularMatrix {
+    fn from_columns(columns: rlu::Matrix<usize, Complex64>) -> Self {
+        let mut col_ptrs = Vec::with_capacity(columns.len() + 1);
+        let nnz = columns.iter().map(Vec::len).sum();
+        let mut row_indices = Vec::with_capacity(nnz);
+        let mut values = Vec::with_capacity(nnz);
+        col_ptrs.push(0);
+        for column in columns {
+            for (row, value) in column {
+                row_indices.push(row);
+                values.push(value);
+            }
+            col_ptrs.push(row_indices.len());
+        }
+        Self {
+            col_ptrs,
+            row_indices,
+            values,
+        }
+    }
+
+    fn nnz(&self) -> usize {
+        self.values.len()
+    }
+
+    fn lsolve(&self, rhs: &mut [Complex64]) {
+        for col in 0..rhs.len() {
+            let value = rhs[col];
+            for index in self.col_ptrs[col]..self.col_ptrs[col + 1] {
+                rhs[self.row_indices[index]] -= self.values[index] * value;
+            }
+        }
+    }
+
+    fn usolve(&self, rhs: &mut [Complex64]) {
+        for col in (0..rhs.len()).rev() {
+            for index in (self.col_ptrs[col]..self.col_ptrs[col + 1]).rev() {
+                let row = self.row_indices[index];
+                if row == col {
+                    rhs[col] /= self.values[index];
+                } else {
+                    rhs[row] -= self.values[index] * rhs[col];
+                }
+            }
         }
     }
 }
