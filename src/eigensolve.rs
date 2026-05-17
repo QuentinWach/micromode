@@ -171,6 +171,10 @@ where
 {
     let n = mat.rows;
     let krylov_dim = options.krylov_dim.min(n).max(num_modes + 2);
+    let checkpoint_start = krylov_dim.min(((3 * krylov_dim + 3) / 4).max((num_modes + 8).max(16)));
+    let checkpoint_interval = 4;
+    let stability_tolerance = options.tolerance.sqrt();
+    let mut previous_checkpoint_values: Option<Vec<Complex64>> = None;
     let start = initial_vector
         .map(|values| {
             if values.len() != n {
@@ -209,7 +213,36 @@ where
         if let (Some(profile), Some(start)) = (profile.as_mut(), orthogonalization_start) {
             profile.arnoldi_orthogonalization += start.elapsed();
         }
-        if norm <= options.tolerance || col + 1 == krylov_dim {
+        if let Some(profile) = profile.as_mut() {
+            profile.arnoldi_steps = actual_dim;
+        }
+
+        let exhausted = norm <= options.tolerance || col + 1 == krylov_dim;
+        let checkpoint_due = actual_dim >= checkpoint_start
+            && ((actual_dim - checkpoint_start) % checkpoint_interval == 0 || exhausted);
+        if checkpoint_due {
+            let candidates = candidate_eigenpairs_from_hessenberg(
+                mat,
+                &q_vectors,
+                &hessenberg,
+                actual_dim,
+                num_modes,
+                guess_value,
+                backend,
+                options.tolerance,
+                profile.as_deref_mut(),
+            )?;
+            let converged = candidates_converged(&candidates, num_modes, options.tolerance);
+            let stable = previous_checkpoint_values.as_ref().is_some_and(|previous| {
+                candidates_stable(previous, &candidates, stability_tolerance)
+            });
+            previous_checkpoint_values =
+                Some(candidates.iter().map(|candidate| candidate.value).collect());
+            if exhausted || (converged && stable) {
+                return Ok(candidates);
+            }
+        }
+        if exhausted {
             break;
         }
         scale_vector(&mut work, Complex64::new(1.0 / norm, 0.0));
@@ -219,8 +252,30 @@ where
         profile.arnoldi_steps = actual_dim;
     }
 
-    // Solve the small projected problem, then lift each Ritz vector back into
-    // the full grid basis using the stored Arnoldi vectors.
+    candidate_eigenpairs_from_hessenberg(
+        mat,
+        &q_vectors,
+        &hessenberg,
+        actual_dim,
+        num_modes,
+        guess_value,
+        backend,
+        options.tolerance,
+        profile.as_deref_mut(),
+    )
+}
+
+fn candidate_eigenpairs_from_hessenberg(
+    mat: &SparseMatrix,
+    q_vectors: &[Vec<Complex64>],
+    hessenberg: &DMatrix<Complex64>,
+    actual_dim: usize,
+    num_modes: usize,
+    guess_value: Complex64,
+    backend: &'static str,
+    tolerance: f64,
+    mut profile: Option<&mut ShiftInvertProfile>,
+) -> Result<Vec<Eigenpair>, String> {
     let h_square = hessenberg
         .view((0, 0), (actual_dim, actual_dim))
         .into_owned();
@@ -235,7 +290,7 @@ where
     }
     let mut theta_candidates = Vec::new();
     for theta in theta_values.iter().copied() {
-        if theta.norm() <= options.tolerance {
+        if theta.norm() <= tolerance {
             continue;
         }
         let lambda = guess_value + Complex64::new(1.0, 0.0) / theta;
@@ -301,6 +356,25 @@ where
             backend,
         })
         .collect())
+}
+
+fn candidates_converged(candidates: &[Eigenpair], num_modes: usize, tolerance: f64) -> bool {
+    candidates.len() == num_modes
+        && candidates
+            .iter()
+            .all(|candidate| candidate.residual <= tolerance)
+}
+
+fn candidates_stable(
+    previous_values: &[Complex64],
+    candidates: &[Eigenpair],
+    tolerance: f64,
+) -> bool {
+    previous_values.len() == candidates.len()
+        && previous_values
+            .iter()
+            .zip(candidates)
+            .all(|(previous, candidate)| (*previous - candidate.value).norm() <= tolerance)
 }
 
 #[derive(Clone, Debug)]
