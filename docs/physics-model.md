@@ -1,0 +1,133 @@
+# Physics Model
+
+MicroMode solves source-free, frequency-domain Maxwell modes on a rasterized
+mode plane. Fields are assumed to vary as
+
+$$
+\mathbf{E}(x, y, z) = \mathbf{e}(x, y) e^{i k_0 n_\mathrm{eff} z},
+\qquad
+\mathbf{H}(x, y, z) = \mathbf{h}(x, y) e^{i k_0 n_\mathrm{eff} z},
+$$
+
+where \(k_0 = 2\pi / \lambda_0\). The Rust kernels use relative material
+tensors \(\epsilon_r(x,y)\), \(\mu_r(x,y)\) and scale transverse derivatives by
+\(1/k_0\), so the sparse operators are dimensionless. On the local Yee grid,
+the four derivative matrices are
+
+$$
+D_{xf}, D_{xb}, D_{yf}, D_{yb}
+\approx
+\frac{1}{k_0}\partial_x^\mathrm{forward/backward},
+\frac{1}{k_0}\partial_y^\mathrm{forward/backward}.
+$$
+
+For diagonal material tensors, MicroMode reduces Maxwell's equations to a
+transverse electric eigenproblem. With
+
+$$
+\mathbf{e}_t =
+\begin{bmatrix} E_x \\ E_y \end{bmatrix},
+\qquad
+A_\mathrm{diag} =
+P_\mu Q + P_\partial Q_\epsilon,
+$$
+
+the solved eigenproblem is
+
+$$
+A_\mathrm{diag}\mathbf{e}_t = -n_\mathrm{eff}^2 \mathbf{e}_t.
+$$
+
+The block operators are assembled from the Yee derivatives and diagonal tensor
+components:
+
+$$
+P_\mu =
+\begin{bmatrix}
+0 & \mu_{yy} \\
+-\mu_{xx} & 0
+\end{bmatrix},
+\qquad
+Q_\epsilon =
+\begin{bmatrix}
+0 & \epsilon_{yy} \\
+-\epsilon_{xx} & 0
+\end{bmatrix},
+$$
+
+$$
+P_\partial =
+\begin{bmatrix}
+-D_{xf}\epsilon_{zz}^{-1}D_{yb} & D_{xf}\epsilon_{zz}^{-1}D_{xb} \\
+-D_{yf}\epsilon_{zz}^{-1}D_{yb} & D_{yf}\epsilon_{zz}^{-1}D_{xb}
+\end{bmatrix},
+$$
+
+$$
+Q_\partial =
+\begin{bmatrix}
+-D_{xb}\mu_{zz}^{-1}D_{yf} & D_{xb}\mu_{zz}^{-1}D_{xf} \\
+-D_{yb}\mu_{zz}^{-1}D_{yf} & D_{yb}\mu_{zz}^{-1}D_{xf}
+\end{bmatrix},
+\qquad
+Q = Q_\epsilon + Q_\partial.
+$$
+
+After the transverse solve, the remaining field components are reconstructed
+from the curl equations:
+
+$$
+\begin{bmatrix} H_x \\ H_y \end{bmatrix}
+\propto
+\frac{1}{i n_\mathrm{eff}}Q\mathbf{e}_t,
+\qquad
+H_z \propto \mu_{zz}^{-1}(D_{xf}E_y - D_{yf}E_x),
+$$
+
+$$
+E_z \propto \epsilon_{zz}^{-1}(D_{xb}H_y - D_{yb}H_x).
+$$
+
+For full tensor media, including off-diagonal \(\epsilon\)/\(\mu\) terms and
+angle or bend coordinate transforms, MicroMode switches to a first-order
+tensorial eigenproblem:
+
+$$
+A_\mathrm{tensor}
+\begin{bmatrix} E_x \\ E_y \\ H_x \\ H_y \end{bmatrix}
+=
+n_\mathrm{eff}
+\begin{bmatrix} E_x \\ E_y \\ H_x \\ H_y \end{bmatrix}.
+$$
+
+The longitudinal tensor couplings are eliminated through local Schur
+complements such as
+
+$$
+\epsilon^{(s)}_{\alpha\beta}
+=
+\epsilon_{\alpha\beta}
+-
+\epsilon_{\alpha z}\epsilon_{z\beta}/\epsilon_{zz},
+\qquad
+\mu^{(s)}_{\alpha\beta}
+=
+\mu_{\alpha\beta}
+-
+\mu_{\alpha z}\mu_{z\beta}/\mu_{zz},
+$$
+
+then \(E_z\) and \(H_z\) are reconstructed with the off-diagonal coupling terms
+included. This is the path used automatically for `Materials.from_components`,
+angled solves, and bend solves whenever the transformed tensors are no longer
+diagonal.
+
+PMLs are implemented as complex coordinate stretching. When `pml` is enabled,
+each derivative is premultiplied by a diagonal stretch matrix:
+
+$$
+D \leftarrow S^{-1}D,\qquad
+s(u) = \kappa(u) + i\frac{\sigma(u)}{\omega\epsilon_0},
+$$
+
+with polynomial \(\kappa\) and \(\sigma\) profiles controlled by `PmlSpec`.
