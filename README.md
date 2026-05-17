@@ -58,16 +58,22 @@ data.to_hdf5("modes.h5")
 
 ## Physics Model
 
-MicroMode solves source-free, frequency-domain Maxwell modes on a rasterized
-Yee mode plane. It assumes modal fields
+MicroMode solves the source-free frequency-domain Maxwell equations on a
+rasterized Yee mode plane,
 
 $$
-\mathbf{E}(x,y,z)=\mathbf{e}(x,y)e^{i k_0 n_\mathrm{eff} z},
+\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H},
 \qquad
-\mathbf{H}(x,y,z)=\mathbf{h}(x,y)e^{i k_0 n_\mathrm{eff} z},
+\nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},
 $$
 
-then uses either the diagonal-media reduction
+with modal fields
+
+$$
+\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.
+$$
+
+On diagonal material grids this becomes a transverse eigenproblem,
 
 $$
 A_\mathrm{diag}
@@ -77,18 +83,9 @@ A_\mathrm{diag}
 \begin{bmatrix}E_x\\E_y\end{bmatrix}
 $$
 
-or the full tensorial first-order form
-
-$$
-A_\mathrm{tensor}
-\begin{bmatrix}E_x\\E_y\\H_x\\H_y\end{bmatrix}
-=
-n_\mathrm{eff}
-\begin{bmatrix}E_x\\E_y\\H_x\\H_y\end{bmatrix}.
-$$
-
-The detailed derivation is in [docs/physics-model.md](docs/physics-model.md),
-and the public solver controls are summarized in
+while full tensor or transformed grids use a first-order tensorial form. The
+detailed derivation is in [docs/physics-model.md](docs/physics-model.md), and
+the public solver controls are summarized in
 [docs/mode-solver-methods.md](docs/mode-solver-methods.md).
 
 

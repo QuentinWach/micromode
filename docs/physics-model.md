@@ -1,7 +1,28 @@
 # Physics Model
 
-MicroMode solves source-free, frequency-domain Maxwell modes on a rasterized
-mode plane. Fields are assumed to vary as
+MicroMode solves source-free, frequency-domain Maxwell's equations on a
+rasterized mode plane:
+
+$$
+\nabla \times \mathbf{E}(\mathbf{r})
+=
+-i\omega\mu(\mathbf{r},\omega)\mathbf{H}(\mathbf{r}),
+\qquad
+\nabla \times \mathbf{H}(\mathbf{r})
+=
+i\omega\epsilon(\mathbf{r},\omega)\mathbf{E}(\mathbf{r}).
+$$
+
+Here:
+
+- \(\mathbf{r}\) is position in the local mode-coordinate system;
+- \(\mathbf{E}\) and \(\mathbf{H}\) are the electric and magnetic mode fields;
+- \(\omega\) is the angular frequency;
+- \(\epsilon\) and \(\mu\) are the supplied material tensors.
+
+Unlike a driven FDFD field solve, MicroMode is a mode solver: there are no
+electric or magnetic current sources. It assumes fields vary along the local
+propagation axis as
 
 $$
 \mathbf{E}(x, y, z) = \mathbf{e}(x, y) e^{i k_0 n_\mathrm{eff} z},
@@ -9,10 +30,16 @@ $$
 \mathbf{H}(x, y, z) = \mathbf{h}(x, y) e^{i k_0 n_\mathrm{eff} z},
 $$
 
-where \(k_0 = 2\pi / \lambda_0\). The Rust kernels use relative material
-tensors \(\epsilon_r(x,y)\), \(\mu_r(x,y)\) and scale transverse derivatives by
-\(1/k_0\), so the sparse operators are dimensionless. On the local Yee grid,
-the four derivative matrices are
+where \(k_0 = 2\pi / \lambda_0\) and \(n_\mathrm{eff}\) is the unknown complex
+effective index. The transverse fields are discretized by the
+finite-difference frequency-domain method on a regular Yee grid.
+
+## Discretization
+
+The Rust kernels use relative material tensors \(\epsilon_r(x,y)\),
+\(\mu_r(x,y)\) and scale transverse derivatives by \(1/k_0\), so the sparse
+operators are dimensionless. On the local Yee grid, the four derivative
+matrices are
 
 $$
 D_{xf}, D_{xb}, D_{yf}, D_{yb}
@@ -20,6 +47,18 @@ D_{xf}, D_{xb}, D_{yf}, D_{yb}
 \frac{1}{k_0}\partial_x^\mathrm{forward/backward},
 \frac{1}{k_0}\partial_y^\mathrm{forward/backward}.
 $$
+
+Low-edge PEC/PMC boundary settings modify the derivative stencils, and PMLs
+premultiply derivatives by complex stretch matrices:
+
+$$
+D \leftarrow S^{-1}D,\qquad
+s(u) = \kappa(u) + i\frac{\sigma(u)}{\omega\epsilon_0}.
+$$
+
+The stretch profiles are polynomial functions controlled by `PmlSpec`.
+
+## Diagonal Materials
 
 For diagonal material tensors, MicroMode reduces Maxwell's equations to a
 transverse electric eigenproblem. With
@@ -88,6 +127,8 @@ $$
 E_z \propto \epsilon_{zz}^{-1}(D_{xb}H_y - D_{yb}H_x).
 $$
 
+## Tensorial Materials
+
 For full tensor media, including off-diagonal \(\epsilon\)/\(\mu\) terms and
 angle or bend coordinate transforms, MicroMode switches to a first-order
 tensorial eigenproblem:
@@ -121,13 +162,3 @@ then \(E_z\) and \(H_z\) are reconstructed with the off-diagonal coupling terms
 included. This is the path used automatically for `Materials.from_components`,
 angled solves, and bend solves whenever the transformed tensors are no longer
 diagonal.
-
-PMLs are implemented as complex coordinate stretching. When `pml` is enabled,
-each derivative is premultiplied by a diagonal stretch matrix:
-
-$$
-D \leftarrow S^{-1}D,\qquad
-s(u) = \kappa(u) + i\frac{\sigma(u)}{\omega\epsilon_0},
-$$
-
-with polynomial \(\kappa\) and \(\sigma\) profiles controlled by `PmlSpec`.
