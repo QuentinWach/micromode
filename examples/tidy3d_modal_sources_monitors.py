@@ -114,14 +114,16 @@ def plot_tidy3d_mode_fields(materials: mm.Materials, eps: np.ndarray, data: mm.R
                     extent=extent,
                     aspect="equal",
                     cmap="magma",
+                    vmin=0.0,
+                    vmax=float(np.nanpercentile(values, 99.5)),
                     interpolation="nearest",
                 )
                 draw_material_context(ax, y, z, eps)
                 ax.set_title(f"{component}, mode_index={mode_index}")
                 ax.set_xlabel("y (um)")
                 ax.set_ylabel("z (um)")
-                ax.set_xlim(-1.5, 1.5)
-                ax.set_ylim(-1.05, 1.08)
+                ax.set_xlim(extent[0], extent[1])
+                ax.set_ylim(extent[2], extent[3])
                 cbar = fig.colorbar(image, ax=ax, extend="both", fraction=0.046, pad=0.04)
                 cbar.set_label(f"|{component}|")
         save_figure(fig, path)
