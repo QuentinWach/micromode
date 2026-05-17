@@ -1,7 +1,8 @@
 # Physics Model
 
 MicroMode solves source-free, frequency-domain Maxwell's equations on a
-rasterized mode plane:
+rasterized mode plane, following the same FDFD starting point used by
+MaxwellFDFD [1]:
 
 $$
 \nabla \times \mathbf{E}(\mathbf{r})
@@ -32,7 +33,7 @@ $$
 
 where \(k_0 = 2\pi / \lambda_0\) and \(n_\mathrm{eff}\) is the unknown complex
 effective index. The transverse fields are discretized by the
-finite-difference frequency-domain method on a regular Yee grid.
+finite-difference frequency-domain method on a regular Yee grid [2].
 
 ## Discretization
 
@@ -56,7 +57,9 @@ D \leftarrow S^{-1}D,\qquad
 s(u) = \kappa(u) + i\frac{\sigma(u)}{\omega\epsilon_0}.
 $$
 
-The stretch profiles are polynomial functions controlled by `PmlSpec`.
+The stretch profiles are polynomial functions controlled by `PmlSpec`. The
+stretched-coordinate PML form follows the frequency-domain Maxwell literature
+summarized by Shin and Fan [3].
 
 ## Diagonal Materials
 
@@ -162,3 +165,17 @@ then \(E_z\) and \(H_z\) are reconstructed with the off-diagonal coupling terms
 included. This is the path used automatically for `Materials.from_components`,
 angled solves, and bend solves whenever the transformed tensors are no longer
 diagonal.
+
+## References
+
+[1] W. Shin, [MaxwellFDFD webpage](https://www.mit.edu/~wsshin/maxwellfdfd.html), 2015.
+
+[2] K. S. Yee, "Numerical solution of initial boundary value problems involving
+Maxwell's equations in isotropic media," *IEEE Transactions on Antennas and
+Propagation*, vol. 14, no. 3, pp. 302-307, 1966.
+doi:[10.1109/TAP.1966.1138693](https://doi.org/10.1109/TAP.1966.1138693).
+
+[3] W. Shin and S. Fan, "Choice of the perfectly matched layer boundary
+condition for frequency-domain Maxwell's equations solvers," *Journal of
+Computational Physics*, vol. 231, no. 8, pp. 3406-3431, 2012.
+doi:[10.1016/j.jcp.2012.01.013](https://doi.org/10.1016/j.jcp.2012.01.013).

@@ -33,8 +33,8 @@ returns a coordinate-aware `Result`.
 
 ## Eigenpair Selection
 
-Internally, eigenpairs are selected with sparse shift-invert Arnoldi. For a
-matrix \(A\) and shift \(\sigma\), Arnoldi is applied to
+Internally, eigenpairs are selected with sparse shift-invert Arnoldi [1, 2].
+For a matrix \(A\) and shift \(\sigma\), Arnoldi is applied to
 
 $$
 (A-\sigma I)^{-1},
@@ -67,3 +67,15 @@ $$
 `k_eff`, `mode_area`, `pol_fraction`, `pol_fraction_waveguide`, `modes_info`,
 `to_dataframe()`, `overlap()`, `overlap_matrix()`, `plot_field()`,
 `plot_field_components()`, `to_hdf5()`, and `Result.from_hdf5()`.
+
+## References
+
+[1] W. E. Arnoldi, "The principle of minimized iterations in the solution of the
+matrix eigenvalue problem," *Quarterly of Applied Mathematics*, vol. 9, no. 1,
+pp. 17-29, 1951.
+[AMS record](https://www.ams.org/qam/1951-09-01/S0033-569X-1951-42792-9/).
+
+[2] R. B. Lehoucq, D. C. Sorensen, and C. Yang, *ARPACK Users' Guide: Solution
+of Large-Scale Eigenvalue Problems with Implicitly Restarted Arnoldi Methods*,
+SIAM, 1998.
+doi:[10.1137/1.9780898719628](https://doi.org/10.1137/1.9780898719628).
