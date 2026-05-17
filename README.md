@@ -1,14 +1,16 @@
 # micromode
 
-An electromagnetic mode solver using the FDFD method on a regular Yee-grid, written in native Rust.
-
-[![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
-[![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
-![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[regular Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
 
 ```bash
 pip install micromode
 ```
+
+[![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
+[![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
+![Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen)
+[![PyPI](https://img.shields.io/pypi/v/micromode)](https://pypi.org/project/micromode/)
+![Status](https://img.shields.io/badge/status-alpha-orange)
 
 
 ## Why Use It?
