@@ -60,34 +60,15 @@ data.to_hdf5("modes.h5")
 
 ## Physics
 
-MicroMode solves the source-free frequency-domain Maxwell equations on a
-rasterized Yee mode plane,
-
-$$
-\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H},
-\qquad
-\nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},
-$$
-
-with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
+MicroMode solves the source-free frequency-domain Maxwell equations on a rasterized Yee mode plane, $\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H}, \; \nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},$ with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
 
 On diagonal material grids this becomes a transverse eigenproblem,
-
-$$
-A_\mathrm{diag}
-\begin{bmatrix}E_x\\E_y\end{bmatrix}
-=
--n_\mathrm{eff}^2
-\begin{bmatrix}E_x\\E_y\end{bmatrix}
-$$
-
 while full tensor or transformed grids use a first-order tensorial form. The
 detailed derivation is in [docs/physics-model.md](docs/physics-model.md), and
-the public solver controls are summarized in
-[docs/mode-solver-methods.md](docs/mode-solver-methods.md).
+the public solver controls are summarized in [docs/mode-solver-methods.md](docs/mode-solver-methods.md).
 
 
-## Performance
+## Solver
 
 MicroMode is designed to make high-performance mode solving available without
 requiring users to install external solver stacks. The production backend is a

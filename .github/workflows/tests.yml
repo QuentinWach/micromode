@@ -55,12 +55,12 @@ jobs:
       - name: Upload coverage to Codecov
         id: codecov_upload
         uses: codecov/codecov-action@v4
+        continue-on-error: true
         if: matrix.python-version == '3.13'
         with:
           files: ./coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Generate local coverage badge
         if: matrix.python-version == '3.13' && steps.codecov_upload.outcome == 'success'
@@ -77,7 +77,7 @@ jobs:
     name: Update coverage badge
     needs: test-portable
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && needs.test-portable.result == 'success'
     permissions:
       contents: write
 
@@ -86,11 +86,13 @@ jobs:
 
       - name: Download local coverage badge
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: coverage-badge
           path: tmp/coverage-badge
 
       - name: Commit local coverage badge
+        if: hashFiles('tmp/coverage-badge/coverage.svg') != ''
         run: |
           cp tmp/coverage-badge/coverage.svg docs/assets/coverage.svg
           if ! git diff --quiet -- docs/assets/coverage.svg; then
