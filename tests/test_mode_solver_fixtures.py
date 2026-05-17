@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from benchmarks.mode_solver.fixtures import (
     data_path,
@@ -82,6 +83,7 @@ def test_phase_aligned_relative_error_accepts_global_complex_phase():
     assert overlap_error < 1e-14
 
 
+@pytest.mark.slow
 def test_local_fixture_comparison_uses_staggered_rasterization_for_z_strips():
     manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
     entries = {entry["case_id"]: entry for entry in manifest["cases"]}
@@ -92,6 +94,7 @@ def test_local_fixture_comparison_uses_staggered_rasterization_for_z_strips():
         assert status["n_complex_max_abs_error"] <= status["n_complex_atol"]
 
 
+@pytest.mark.slow
 def test_local_production_fixture_matrix_passes():
     from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
 
@@ -111,6 +114,7 @@ def test_local_production_fixture_matrix_passes():
         assert status["n_complex_max_abs_error"] <= status["n_complex_atol"]
 
 
+@pytest.mark.slow
 def test_unsupported_fixture_matrix_is_explicit():
     from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
 

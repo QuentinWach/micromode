@@ -282,6 +282,7 @@ _LOCAL_CASES = {
         "trim_edges": ((1, 1), (0, 0)),
         "backend_tolerances": {"rust_sparse": 1e-5},
         "sort_order": "ascending",
+        "krylov_dim": 64,
     },
     "pec_parallel_plate_y": {
         "support": "outside_80_target",
@@ -452,6 +453,7 @@ def _solve_recipe_for_freq(
         ),
         bend_radius=recipe.get("bend_radius"),
         bend_axis=recipe.get("bend_axis", 0),
+        krylov_dim=recipe.get("krylov_dim"),
     )
 
 
