@@ -60,18 +60,17 @@ data.to_hdf5("modes.h5")
 ## Examples
 
 
-### Ridge Modes
-![Ridge Modes](docs/assets/ridge_modes.png)
+### Tidy3D Waveguide
+![Tidy3D modal monitor example](docs/assets/tidy3d_modal_modes.png)
 
-The ridge modes example rasterizes an angled silicon slab on an oxide substrate
-with air cladding, then solves the fundamental guided fields directly from the
-material grid. It shows the real electric and magnetic field components with
-the material outline overlaid.
+The Tidy3D modal monitor example recreates the strip-waveguide setup from
+Flexcompute's modal sources and monitors notebook. It solves the first three
+x-propagating modes of a silicon waveguide on a silica substrate and plots
+`|Ey|` and `|Ez|` on the same y-z mode plane. (See [Tidy3D, "Defining Mode Sources and Monitors"](https://www.flexcompute.com/tidy3d/examples/notebooks/ModalSourcesMonitors/).)
 
 ```bash
-uv run --extra dev python examples/ridge_waveguide_readme.py
+uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
 ```
-
 
 ### Hybridization Sweep
 ![Hybridization sweep example](docs/assets/hybridization_sweep.png)
