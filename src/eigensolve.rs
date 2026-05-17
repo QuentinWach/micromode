@@ -5,6 +5,8 @@
 //! dominant-eigenvalue problem for `(A - sigma I)^-1`, which sparse Krylov
 //! methods can solve efficiently on realistic grids.
 
+use std::time::{Duration, Instant};
+
 use nalgebra::{linalg::SVD, DMatrix};
 use num_complex::Complex64;
 
@@ -33,6 +35,28 @@ impl Default for ShiftInvertOptions {
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct ShiftInvertProfile {
+    pub pairs: Vec<Eigenpair>,
+    pub total: Duration,
+    pub shift_diagonal: Duration,
+    pub amd_ordering: Duration,
+    pub lu_factorization: Duration,
+    pub linear_solves: Duration,
+    pub arnoldi_orthogonalization: Duration,
+    pub hessenberg_eigensolve: Duration,
+    pub ritz_reconstruction: Duration,
+    pub residuals: Duration,
+    pub sorting: Duration,
+    pub solve_calls: usize,
+    pub arnoldi_steps: usize,
+    pub candidate_count: usize,
+    pub returned_pairs: usize,
+    pub lu_l_nnz: usize,
+    pub lu_u_nnz: usize,
+    pub max_residual: f64,
+}
+
 pub fn selected_sparse_shift_invert_eigenpairs(
     mat: &SparseMatrix,
     num_modes: usize,
@@ -56,6 +80,48 @@ pub fn selected_sparse_shift_invert_native_eigenpairs(
     initial_vector: Option<&[Complex64]>,
     options: ShiftInvertOptions,
 ) -> Result<Vec<Eigenpair>, String> {
+    selected_sparse_shift_invert_native_eigenpairs_impl(
+        mat,
+        num_modes,
+        guess_value,
+        initial_vector,
+        options,
+        None,
+    )
+}
+
+pub fn profile_sparse_shift_invert_native_eigenpairs(
+    mat: &SparseMatrix,
+    num_modes: usize,
+    guess_value: Complex64,
+    initial_vector: Option<&[Complex64]>,
+    options: ShiftInvertOptions,
+) -> Result<ShiftInvertProfile, String> {
+    let total_start = Instant::now();
+    let mut profile = ShiftInvertProfile::default();
+    let pairs = selected_sparse_shift_invert_native_eigenpairs_impl(
+        mat,
+        num_modes,
+        guess_value,
+        initial_vector,
+        options,
+        Some(&mut profile),
+    )?;
+    profile.total = total_start.elapsed();
+    profile.max_residual = pairs.iter().map(|pair| pair.residual).fold(0.0, f64::max);
+    profile.returned_pairs = pairs.len();
+    profile.pairs = pairs;
+    Ok(profile)
+}
+
+fn selected_sparse_shift_invert_native_eigenpairs_impl(
+    mat: &SparseMatrix,
+    num_modes: usize,
+    guess_value: Complex64,
+    initial_vector: Option<&[Complex64]>,
+    options: ShiftInvertOptions,
+    mut profile: Option<&mut ShiftInvertProfile>,
+) -> Result<Vec<Eigenpair>, String> {
     if mat.rows != mat.cols {
         return Err("eigenvalue matrix must be square".to_string());
     }
@@ -70,8 +136,12 @@ pub fn selected_sparse_shift_invert_native_eigenpairs(
 
     // Shift-invert solves `(A - sigma I) y = x` inside Arnoldi. Ritz values
     // theta of the inverse-shifted operator map back to lambda = sigma + 1/theta.
+    let shift_start = profile.as_ref().map(|_| Instant::now());
     let shifted = mat.shifted_diagonal(guess_value);
-    let factorization = SparseLu::factor(&shifted)?;
+    if let (Some(profile), Some(start)) = (profile.as_mut(), shift_start) {
+        profile.shift_diagonal += start.elapsed();
+    }
+    let factorization = SparseLu::factor_with_profile(&shifted, profile.as_deref_mut())?;
     selected_sparse_shift_invert_native_with_solver(
         mat,
         num_modes,
@@ -79,6 +149,7 @@ pub fn selected_sparse_shift_invert_native_eigenpairs(
         initial_vector,
         options,
         "native_shift_invert",
+        profile.as_deref_mut(),
         |input| factorization.solve(input),
     )
 }
@@ -90,6 +161,7 @@ fn selected_sparse_shift_invert_native_with_solver<F>(
     initial_vector: Option<&[Complex64]>,
     options: ShiftInvertOptions,
     backend: &'static str,
+    mut profile: Option<&mut ShiftInvertProfile>,
     mut solve: F,
 ) -> Result<Vec<Eigenpair>, String>
 where
@@ -111,7 +183,13 @@ where
 
     for col in 0..krylov_dim {
         // Native Arnoldi fallback with one reorthogonalization pass.
+        let solve_start = profile.as_ref().map(|_| Instant::now());
         let mut work = solve(&q_vectors[col])?;
+        if let (Some(profile), Some(start)) = (profile.as_mut(), solve_start) {
+            profile.linear_solves += start.elapsed();
+            profile.solve_calls += 1;
+        }
+        let orthogonalization_start = profile.as_ref().map(|_| Instant::now());
         for row in 0..=col {
             let projection = complex_dot(&q_vectors[row], &work);
             hessenberg[(row, col)] = projection;
@@ -125,11 +203,17 @@ where
         let norm = vector_norm(&work);
         actual_dim = col + 1;
         hessenberg[(col + 1, col)] = Complex64::new(norm, 0.0);
+        if let (Some(profile), Some(start)) = (profile.as_mut(), orthogonalization_start) {
+            profile.arnoldi_orthogonalization += start.elapsed();
+        }
         if norm <= options.tolerance || col + 1 == krylov_dim {
             break;
         }
         scale_vector(&mut work, Complex64::new(1.0 / norm, 0.0));
         q_vectors.push(work);
+    }
+    if let Some(profile) = profile.as_mut() {
+        profile.arnoldi_steps = actual_dim;
     }
 
     // Solve the small projected problem, then lift each Ritz vector back into
@@ -137,24 +221,40 @@ where
     let h_square = hessenberg
         .view((0, 0), (actual_dim, actual_dim))
         .into_owned();
+    let hessenberg_start = profile.as_ref().map(|_| Instant::now());
     let theta_values = h_square
         .clone()
         .schur()
         .eigenvalues()
         .ok_or_else(|| "failed to compute Hessenberg eigenvalues".to_string())?;
+    if let (Some(profile), Some(start)) = (profile.as_mut(), hessenberg_start) {
+        profile.hessenberg_eigensolve += start.elapsed();
+    }
     let mut candidates = Vec::new();
     for theta in theta_values.iter().copied() {
         if theta.norm() <= options.tolerance {
             continue;
         }
         let lambda = guess_value + Complex64::new(1.0, 0.0) / theta;
+        let ritz_start = profile.as_ref().map(|_| Instant::now());
         let coeffs = null_vector_for_eigenvalue(&h_square, theta)?;
         let vector = combine_ritz_vector(&q_vectors, &coeffs);
+        if let (Some(profile), Some(start)) = (profile.as_mut(), ritz_start) {
+            profile.ritz_reconstruction += start.elapsed();
+        }
+        let residual_start = profile.as_ref().map(|_| Instant::now());
         let residual = sparse_residual_norm(mat, &vector, lambda);
+        if let (Some(profile), Some(start)) = (profile.as_mut(), residual_start) {
+            profile.residuals += start.elapsed();
+        }
         candidates.push((lambda, vector, residual));
+    }
+    if let Some(profile) = profile.as_mut() {
+        profile.candidate_count = candidates.len();
     }
     // Sort by closeness to the requested shift. Residual is the tie-breaker
     // because it is the direct measure of eigenpair quality.
+    let sorting_start = profile.as_ref().map(|_| Instant::now());
     candidates.sort_by(|(left, _, left_res), (right, _, right_res)| {
         let left_distance = (*left - guess_value).norm();
         let right_distance = (*right - guess_value).norm();
@@ -168,6 +268,9 @@ where
             })
     });
     candidates.truncate(num_modes);
+    if let (Some(profile), Some(start)) = (profile.as_mut(), sorting_start) {
+        profile.sorting += start.elapsed();
+    }
     Ok(candidates
         .into_iter()
         .map(|(value, vector, residual)| Eigenpair {
@@ -189,12 +292,16 @@ struct SparseLu {
 }
 
 impl SparseLu {
-    fn factor(matrix: &SparseMatrix) -> Result<Self, String> {
+    fn factor_with_profile(
+        matrix: &SparseMatrix,
+        mut profile: Option<&mut ShiftInvertProfile>,
+    ) -> Result<Self, String> {
         // Native sparse LU is the fallback linear solve. Validate pivots here
         // so `solve` can assume the factors are usable.
         if matrix.rows != matrix.cols {
             return Err("LU factorization requires a square matrix".to_string());
         }
+        let ordering_start = profile.as_ref().map(|_| Instant::now());
         let col_perm = amd::order::<usize>(
             matrix.rows,
             matrix.col_ptrs(),
@@ -203,6 +310,10 @@ impl SparseLu {
         )
         .map(|(perm, _, _)| perm)
         .ok();
+        if let (Some(profile), Some(start)) = (profile.as_mut(), ordering_start) {
+            profile.amd_ordering += start.elapsed();
+        }
+        let factor_start = profile.as_ref().map(|_| Instant::now());
         let (l, u, row_perm) = rlu::lu_decomposition(
             matrix.rows,
             matrix.row_indices(),
@@ -213,6 +324,11 @@ impl SparseLu {
             None,
             true,
         );
+        if let (Some(profile), Some(start)) = (profile.as_mut(), factor_start) {
+            profile.lu_factorization += start.elapsed();
+            profile.lu_l_nnz = l.iter().map(Vec::len).sum();
+            profile.lu_u_nnz = u.iter().map(Vec::len).sum();
+        }
         if row_perm.iter().any(|value| value.is_none()) {
             return Err("sparse LU failed to find a complete pivot set".to_string());
         }

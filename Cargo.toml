@@ -17,6 +17,10 @@ crate-type = ["cdylib", "rlib"]
 name = "eigensolver-backend-benchmark"
 path = "benchmarks/eigensolver_backend_benchmark.rs"
 
+[[bin]]
+name = "eigensolver-phase-benchmark"
+path = "benchmarks/eigensolver_phase_benchmark.rs"
+
 [dependencies]
 amd = "0.2"
 nalgebra = "0.33"
