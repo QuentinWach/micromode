@@ -1,7 +1,6 @@
 # micromode
 
-A high-performance electromagnetic mode solver.
-It uses the FDFD method on a regular Yee-grid and is written in native Rust.
+An electromagnetic mode solver using the FDFD method on a regular Yee-grid, written in native Rust.
 
 [![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
 [![Tests](https://img.shields.io/github/actions/workflow/status/QuentinWach/micromode/tests.yml?branch=main&label=tests)](https://github.com/QuentinWach/micromode/actions/workflows/tests.yml)
