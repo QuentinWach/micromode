@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0a1 - Unreleased
+## 0.1.0a3 - Unreleased
 
 Initial alpha release candidate.
 

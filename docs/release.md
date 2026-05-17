@@ -58,11 +58,14 @@ python -m venv /tmp/micromode-testpypi
 ## PyPI Release
 
 1. Update `CHANGELOG.md`.
-2. Commit the release changes.
-3. Tag the release:
+2. Confirm `pyproject.toml`, `Cargo.toml`, and `CHANGELOG.md` all use the
+   same new release version. PyPI filenames are immutable, so never reuse a
+   version that has reached PyPI.
+3. Commit the release changes.
+4. Tag the release with the same version from `pyproject.toml`:
 
 ```bash
-git tag v0.1.0a1
+git tag v0.1.0a3
 git push origin main --tags
 ```
 

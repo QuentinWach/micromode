@@ -1,6 +1,6 @@
 [project]
 name = "micromode"
-version = "0.1.0a1"
+version = "0.1.0a3"
 description = "Rust-backed photonics mode solver with a small Python API."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"

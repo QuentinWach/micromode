@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -23,6 +24,10 @@ def main() -> None:
 
     require(project["name"] == "micromode", "Python package name must be micromode")
     require(project["version"] != "0.0.0", "Python package version must not be 0.0.0")
+    require(
+        package["version"] == python_to_cargo_version(project["version"]),
+        "Rust crate version must match the Python package version",
+    )
     require(project["requires-python"] == ">=3.10,<3.14", "Python support must match the release wheel matrix")
     require(package["version"] != "0.0.0", "Rust crate version must not be 0.0.0")
     require(project["license"] == "Apache-2.0", "Python package license must be Apache-2.0")
@@ -55,12 +60,31 @@ def main() -> None:
         re.fullmatch(r"\d+\.\d+\.\d+(a\d+|b\d+|rc\d+)?", project["version"]),
         f"Python version {project['version']!r} is not a normal PyPI release version",
     )
+    require_tag_matches_version(project["version"])
     print(f"release metadata looks ready for micromode {project['version']}")
 
 
 def load_toml(path: str) -> dict:
     with (ROOT / path).open("rb") as handle:
         return tomllib.load(handle)
+
+
+def python_to_cargo_version(version: str) -> str:
+    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?", version)
+    require(match is not None, f"Python version {version!r} is not a supported release version")
+    base, phase, number = match.groups()
+    if phase is None:
+        return base
+    phase_names = {"a": "alpha", "b": "beta", "rc": "rc"}
+    return f"{base}-{phase_names[phase]}.{number}"
+
+
+def require_tag_matches_version(version: str) -> None:
+    if os.environ.get("GITHUB_REF_TYPE") != "tag":
+        return
+
+    tag = os.environ.get("GITHUB_REF_NAME", "")
+    require(tag == f"v{version}", f"Git tag {tag!r} must match Python version {version!r}")
 
 
 def require(condition: bool, message: str) -> None:
