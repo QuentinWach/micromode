@@ -60,8 +60,7 @@ data.to_hdf5("modes.h5")
 
 ## Physics
 
-MicroMode solves the source-free frequency-domain Maxwell equations on a
-rasterized Yee mode plane, $\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H}, \; \nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},$ with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
+MicroMode solves the source-free frequency-domain Maxwell equations on a rasterized Yee mode plane, $\nabla\times\mathbf{E}=-i\omega\mu\mathbf{H}, \; \nabla\times\mathbf{H}=i\omega\epsilon\mathbf{E},$ with modal fields $\mathbf{E},\mathbf{H}\propto e^{i k_0 n_\mathrm{eff} z}.$
 
 On diagonal material grids this becomes a transverse eigenproblem,
 while full tensor or transformed grids use a first-order tensorial form. The
