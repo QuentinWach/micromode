@@ -38,6 +38,16 @@ That example sweeps a 220 nm fully etched SOI ridge width and writes the
 effective-index and TE-fraction plots to
 `examples/soi_hybridization_outputs/`.
 
+Recreate the Tidy3D modal sources/monitors mode plot:
+
+```bash
+uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
+```
+
+That example uses the strip-waveguide geometry from the Tidy3D modal
+sources/monitors notebook and writes `|Ey|` and `|Ez|` field plots for the first
+three modes to `examples/tidy3d_modal_outputs/`.
+
 Run the README angled-slab waveguide example:
 
 ```bash
