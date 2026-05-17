@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import argparse
 import html
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 
 def main() -> None:
@@ -17,7 +17,9 @@ def main() -> None:
 
     percent = coverage_percent(args.coverage_xml)
     args.output_svg.parent.mkdir(parents=True, exist_ok=True)
-    args.output_svg.write_text(render_badge("coverage", f"{percent:.0f}%", color_for_percent(percent)), encoding="utf-8")
+    args.output_svg.write_text(
+        render_badge("coverage", f"{percent:.0f}%", color_for_percent(percent)), encoding="utf-8"
+    )
 
 
 def coverage_percent(path: Path) -> float:
@@ -53,7 +55,8 @@ def render_badge(label: str, message: str, color: str) -> str:
     width = label_width + message_width
     label_center = label_width / 2
     message_center = label_width + message_width / 2
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img" aria-label="{label}: {message}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img"
+  aria-label="{label}: {message}">
   <title>{label}: {message}</title>
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>

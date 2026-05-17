@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
 
 import matplotlib
 import numpy as np
@@ -14,7 +14,6 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-
 
 FREQ_1550 = sm.C_0 / 1.55
 SI_EPS = 3.48**2
@@ -167,8 +166,8 @@ def make_slot_grid() -> tuple[sm.Materials, np.ndarray]:
     x_edges, y_edges, xx, yy = demo_grid(nx=42, ny=30)
     eps = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
     rail = np.abs(yy) <= 0.11
-    left = (-0.30 <= xx) & (xx <= -0.06)
-    right = (0.06 <= xx) & (xx <= 0.30)
+    left = (xx >= -0.30) & (xx <= -0.06)
+    right = (xx >= 0.06) & (xx <= 0.30)
     eps[rail & (left | right)] = SI_EPS
     return sm.Materials.from_diagonal(eps_xx=eps, x_edges=x_edges, y_edges=y_edges), eps
 
@@ -176,8 +175,8 @@ def make_slot_grid() -> tuple[sm.Materials, np.ndarray]:
 def make_rib_grid() -> tuple[sm.Materials, np.ndarray]:
     x_edges, y_edges, xx, yy = demo_grid(nx=46, ny=30)
     eps = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
-    slab = (np.abs(xx) <= 0.72) & (-0.16 <= yy) & (yy <= -0.05)
-    ridge = (np.abs(xx) <= 0.28) & (-0.05 <= yy) & (yy <= 0.18)
+    slab = (np.abs(xx) <= 0.72) & (yy >= -0.16) & (yy <= -0.05)
+    ridge = (np.abs(xx) <= 0.28) & (yy >= -0.05) & (yy <= 0.18)
     eps[slab | ridge] = SI_EPS
     return sm.Materials.from_diagonal(eps_xx=eps, x_edges=x_edges, y_edges=y_edges), eps
 
@@ -267,7 +266,7 @@ def plot_demo(
             else:
                 image = draw_image(ax, dims, coords, images[column], cmap="RdBu_r", symmetric=True)
                 plot_eps_contours(ax, coords, eps_background)
-            ax.set_title(f"mode {mode_index}, {column}\n" f"n_eff={n_eff.real:.5f}{n_eff.imag:+.1e}j")
+            ax.set_title(f"mode {mode_index}, {column}\nn_eff={n_eff.real:.5f}{n_eff.imag:+.1e}j")
             fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
 
     fig.suptitle(f"{demo.title}: {demo.description}", fontsize=14)
@@ -296,7 +295,7 @@ def electric_magnitude_image(
     magnitude_squared = np.abs(ex) ** 2
     for component in ("Ey", "Ez"):
         other_dims, other_coords, values = component_image(data, component, mode_index)
-        coords_match = all(len(a) == len(b) and np.allclose(a, b) for a, b in zip(coords, other_coords))
+        coords_match = all(len(a) == len(b) and np.allclose(a, b) for a, b in zip(coords, other_coords, strict=True))
         if other_dims != dims or not coords_match:
             raise ValueError("field components are not colocated on a common plotting grid")
         magnitude_squared += np.abs(values) ** 2
@@ -327,7 +326,10 @@ def draw_image(
         limit = max(max_abs, np.finfo(float).eps)
         kwargs = {"vmin": -limit, "vmax": limit}
     else:
-        kwargs = {"vmin": float(np.nanmin(plot_values)), "vmax": max(float(np.nanmax(plot_values)), np.finfo(float).eps)}
+        kwargs = {
+            "vmin": float(np.nanmin(plot_values)),
+            "vmax": max(float(np.nanmax(plot_values)), np.finfo(float).eps),
+        }
     image = ax.imshow(
         plot_values.T,
         extent=extent,

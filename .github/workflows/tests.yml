@@ -10,8 +10,45 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust tooling
+        run: rustup component add rustfmt clippy
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Check Rust formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Rust clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check Python formatting
+        run: uv run ruff format --check .
+
+      - name: Run Python lint
+        run: uv run ruff check .
+
+      - name: Run Python type check
+        run: uv run pyright
+
   test-portable:
     name: Portable tests (Python ${{ matrix.python-version }})
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -105,6 +142,7 @@ jobs:
 
   test-full:
     name: Full portable tests
+    needs: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -132,6 +170,7 @@ jobs:
 
   test-windows:
     name: Windows portable tests
+    needs: lint
     runs-on: windows-latest
 
     steps:

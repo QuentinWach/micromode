@@ -19,7 +19,6 @@ import numpy as np
 
 import micromode as mm
 
-
 WAVELENGTH_UM = 1.55
 N_SI = 3.476
 N_SIO2 = 1.444
@@ -108,12 +107,12 @@ def ridge_waveguide_materials(step: float = 0.02, subpixels: int = 7) -> tuple[m
 
 
 def centered_edges(*, width: float, step: float) -> np.ndarray:
-    cells = int(round(width / step))
+    cells = round(width / step)
     return np.linspace(-0.5 * width, 0.5 * width, cells + 1)
 
 
 def offset_edges(*, lower: float, upper: float, step: float) -> np.ndarray:
-    cells = int(round((upper - lower) / step))
+    cells = round((upper - lower) / step)
     return np.linspace(lower, upper, cells + 1)
 
 
@@ -172,7 +171,7 @@ def plot_modes(materials: mm.Materials, eps: np.ndarray, data: mm.Result, path: 
     with plt.rc_context(publication_style()):
         fig, axes = plt.subplots(2, 2, figsize=(4.9, 2.65), constrained_layout=False, sharex=True, sharey=True)
         fig.subplots_adjust(left=0.02, right=0.995, bottom=0.03, top=0.89, wspace=0.06, hspace=-0.04)
-        for ax, component in zip(axes.ravel(), components):
+        for ax, component in zip(axes.ravel(), components, strict=True):
             field = data.field_components[component].isel(f=0, mode_index=0)
             values = normalize_signed(np.asarray(field.values).squeeze().real)
             ax.imshow(
@@ -215,9 +214,11 @@ def plot_readme_figure(materials: mm.Materials, eps: np.ndarray, data: mm.Result
     )
 
     with plt.rc_context(publication_style()):
-        fig, axes = plt.subplots(1, len(panels), figsize=(7.6, 1.95), constrained_layout=False, sharex=True, sharey=True)
+        fig, axes = plt.subplots(
+            1, len(panels), figsize=(7.6, 1.95), constrained_layout=False, sharex=True, sharey=True
+        )
         fig.subplots_adjust(left=0.035, right=0.995, bottom=0.12, top=0.82, wspace=0.10)
-        for ax, (title, component, mode_index) in zip(axes, panels):
+        for ax, (title, component, mode_index) in zip(axes, panels, strict=True):
             values, cmap, vmin, vmax = readme_panel_values(eps, data, component=component, mode_index=mode_index)
             ax.imshow(
                 values.T,

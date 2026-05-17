@@ -6,7 +6,6 @@ import argparse
 import re
 from pathlib import Path
 
-
 WHEEL_RE = re.compile(
     r"^micromode-(?P<version>[^-]+)-(?P<python>[^-]+)-(?P<abi>[^-]+)-(?P<platform>[^.]+(?:\.[^.]+)*)\.whl$"
 )
@@ -41,7 +40,8 @@ def main() -> None:
     python_tags: set[str] = set()
     for wheel in wheels:
         match = WHEEL_RE.match(wheel.name)
-        require(match is not None, f"unexpected wheel filename: {wheel.name}")
+        if match is None:
+            raise SystemExit(f"unexpected wheel filename: {wheel.name}")
         platform = match["platform"]
         python_tag = match["python"]
         platform_tags.update(platform.split("."))
@@ -56,9 +56,7 @@ def main() -> None:
     missing = sorted(set(args.require_cpython) - python_tags)
     require(not missing, f"missing wheels for CPython: {', '.join(missing)}")
     missing_platforms = sorted(
-        prefix
-        for prefix in args.require_platform
-        if not any(tag.startswith(prefix) for tag in platform_tags)
+        prefix for prefix in args.require_platform if not any(tag.startswith(prefix) for tag in platform_tags)
     )
     require(not missing_platforms, f"missing wheel platform families: {', '.join(missing_platforms)}")
     print(f"release artifacts look publishable: {len(sdists)} sdist(s), {len(wheels)} wheel(s)")

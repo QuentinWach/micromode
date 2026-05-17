@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import xarray as xr
@@ -149,13 +150,13 @@ class Result:
         data_array = data_array.transpose(*[dim for dim in _SPATIAL_DIMS if dim in data_array.dims])
         values = np.asarray(data_array.values).squeeze()
         if val == "real":
-            values = values.real
+            values = np.real(values)
             default_cmap = "RdBu_r"
         elif val in {"abs", "magnitude"}:
             values = np.abs(values)
             default_cmap = "magma"
         elif val == "imag":
-            values = values.imag
+            values = np.imag(values)
             default_cmap = "RdBu_r"
         else:
             raise ValueError("val must be one of 'real', 'imag', or 'abs'")
@@ -208,7 +209,7 @@ class Result:
         nrows = int(np.ceil(len(available) / ncols))
         fig, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=(4.0 * ncols, 3.2 * nrows))
         flat_axes = axes.ravel()
-        for ax, component in zip(flat_axes, available):
+        for ax, component in zip(flat_axes, available, strict=False):
             self.plot_field(component, f=f, mode_index=mode_index, ax=ax, val=val, **imshow_kwargs)
         for ax in flat_axes[len(available) :]:
             ax.set_visible(False)
@@ -222,7 +223,7 @@ class Result:
 
     def overlap(
         self,
-        other: "Result | None" = None,
+        other: Result | None = None,
         *,
         mode_index: int = 0,
         other_mode_index: int | None = None,
@@ -260,7 +261,7 @@ class Result:
 
     def overlap_matrix(
         self,
-        other: "Result | None" = None,
+        other: Result | None = None,
         *,
         f: int | float = 0,
         other_f: int | float | None = None,
@@ -271,7 +272,9 @@ class Result:
 
         other = self if other is None else other
         other_f = f if other_f is None else other_f
-        values = np.empty((self.n_complex.sizes["mode_index"], other.n_complex.sizes["mode_index"]), dtype=np.complex128)
+        values = np.empty(
+            (self.n_complex.sizes["mode_index"], other.n_complex.sizes["mode_index"]), dtype=np.complex128
+        )
         for left_index in range(values.shape[0]):
             for right_index in range(values.shape[1]):
                 values[left_index, right_index] = self.overlap(
@@ -317,7 +320,7 @@ class Result:
         return destination
 
     @classmethod
-    def from_hdf5(cls, path: str | Path) -> "Result":
+    def from_hdf5(cls, path: str | Path) -> Result:
         """Load a :class:`Result` saved with :meth:`to_hdf5`."""
 
         try:
@@ -329,11 +332,9 @@ class Result:
             n_complex = cls._read_data_array(handle["n_complex"])
             n_group = cls._read_data_array(handle["n_group"]) if "n_group" in handle else None
             dispersion = cls._read_data_array(handle["dispersion"]) if "dispersion" in handle else None
-            solver_info = json.loads(handle.attrs["solver_info"]) if "solver_info" in handle.attrs else None
-            field_components = {
-                component: cls._read_data_array(group)
-                for component, group in handle["field_components"].items()
-            }
+            solver_info = json.loads(str(handle.attrs["solver_info"])) if "solver_info" in handle.attrs else None
+            field_group: Any = handle["field_components"]
+            field_components = {component: cls._read_data_array(group) for component, group in field_group.items()}
         return cls(
             n_complex=n_complex,
             field_components=field_components,
@@ -433,16 +434,12 @@ class Result:
 
     def _select_field(self, component: str, *, f: int | float, mode_index: int) -> xr.DataArray:
         data_array = self.field_components[component]
-        if isinstance(f, int):
-            data_array = data_array.isel(f=f)
-        else:
-            data_array = data_array.sel(f=f, method="nearest")
+        data_array = data_array.isel(f=f) if isinstance(f, int) else data_array.sel(f=f, method="nearest")
         return data_array.isel(mode_index=mode_index)
 
     def _selected_mode_fields(self, *, f: int | float, mode_index: int) -> dict[str, xr.DataArray]:
         return {
-            component: self._select_field(component, f=f, mode_index=mode_index)
-            for component in self.field_components
+            component: self._select_field(component, f=f, mode_index=mode_index) for component in self.field_components
         }
 
     def _selected_frequency(self, f: int | float) -> float:
@@ -531,7 +528,9 @@ def _overlap_value(
     # uses H* and measures physical flux. Lorentz deliberately does not
     # conjugate either mode; it is the reciprocal product used to orthogonalize
     # the mode set in Rust.
-    missing = [component for component in (*_E_COMPONENTS, *_H_COMPONENTS) if component not in left or component not in right]
+    missing = [
+        component for component in (*_E_COMPONENTS, *_H_COMPONENTS) if component not in left or component not in right
+    ]
     if missing:
         raise ValueError(f"{kind} overlap requires field component(s): {', '.join(missing)}")
     _validate_overlap_grid(left_result, left, right_result, right)

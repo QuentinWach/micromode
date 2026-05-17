@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal, cast
 
 import numpy as np
 import xarray as xr
 
 from ._rust import C_0, solve_diagonal_sparse, solve_tensorial_sparse
-from .models import BoundarySpec, Materials, PmlSpec, SliceAxis, Spec
+from .models import BoundaryCondition, BoundarySpec, Materials, PmlSpec, SliceAxis, Spec
 from .result import Result
 
 _COMPONENTS = ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")
@@ -330,7 +331,7 @@ def _solve_one_frequency(
     # Forward and backward spacings represent the local Yee grid. The derivative
     # builders need both because E and H components are staggered.
     dlf = (np.diff(x_edges), np.diff(y_edges))
-    dlb = tuple(_dual_steps(steps) for steps in dlf)
+    dlb = (_dual_steps(dlf[0]), _dual_steps(dlf[1]))
     eps_tensor = material_grid.flat_eps_tensor()
     mu_tensor = material_grid.flat_mu_tensor()
     if target_neff is None:
@@ -345,7 +346,7 @@ def _solve_one_frequency(
         # diagonal grid may become full tensor after this step.
         eps_tensor, mu_tensor = _transformed_material_tensors(
             material_grid.eps_tensor,
-            material_grid.mu_tensor,
+            material_grid._resolved_mu_tensor(),
             x_edges=x_edges,
             y_edges=y_edges,
             angle_theta=angle_theta,
@@ -442,17 +443,21 @@ def _solve_one_frequency_rust_sparse(
         derivative_scale=C_0 / (2 * np.pi * freq),
         omega=2 * np.pi * freq,
         num_pml=pml_spec.num_cells,
-        pml_profile=pml_spec.as_dict(),
+        pml_profile=pml_spec.profile_dict(),
         dmin_pml=boundary_spec.dmin_pml,
         dmin_pmc=boundary_spec.dmin_pmc,
         krylov_dim=actual_krylov_dim,
         initial_vector=_default_initial_vector(2 * nx * ny, shape=(nx, ny)),
     )
-    return n_complex, _fields_to_grid(fields, (nx, ny)), _solver_info_with_context(
-        solver_info,
-        backend_kind="diagonal_sparse",
-        shape=(nx, ny),
-        krylov_dim=actual_krylov_dim,
+    return (
+        n_complex,
+        _fields_to_grid(fields, (nx, ny)),
+        _solver_info_with_context(
+            solver_info,
+            backend_kind="diagonal_sparse",
+            shape=(nx, ny),
+            krylov_dim=actual_krylov_dim,
+        ),
     )
 
 
@@ -484,17 +489,21 @@ def _solve_one_frequency_rust_tensorial_sparse(
         derivative_scale=C_0 / (2 * np.pi * freq),
         omega=2 * np.pi * freq,
         num_pml=pml_spec.num_cells,
-        pml_profile=pml_spec.as_dict(),
+        pml_profile=pml_spec.profile_dict(),
         dmin_pml=boundary_spec.dmin_pml,
         dmin_pmc=boundary_spec.dmin_pmc,
         krylov_dim=actual_krylov_dim,
         initial_vector=_default_initial_vector(4 * nx * ny, shape=(nx, ny)),
     )
-    return n_complex, _fields_to_grid(fields, (nx, ny)), _solver_info_with_context(
-        solver_info,
-        backend_kind="tensorial_sparse",
-        shape=(nx, ny),
-        krylov_dim=actual_krylov_dim,
+    return (
+        n_complex,
+        _fields_to_grid(fields, (nx, ny)),
+        _solver_info_with_context(
+            solver_info,
+            backend_kind="tensorial_sparse",
+            shape=(nx, ny),
+            krylov_dim=actual_krylov_dim,
+        ),
     )
 
 
@@ -582,7 +591,7 @@ def _resolve_boundary_spec(
         return BoundarySpec()
     if isinstance(boundary, BoundarySpec):
         return boundary
-    return BoundarySpec(low=boundary)
+    return BoundarySpec(low=cast(tuple[BoundaryCondition, BoundaryCondition], boundary))
 
 
 def _solver_info_with_context(
@@ -652,7 +661,7 @@ def _fields_to_grid(fields: list[np.ndarray], shape: tuple[int, int]) -> dict[st
     nx, ny = shape
     mode_count = fields[0].shape[0]
     out = {}
-    for component, values_by_mode in zip(_COMPONENTS, fields):
+    for component, values_by_mode in zip(_COMPONENTS, fields, strict=True):
         values = np.asarray(values_by_mode).reshape(mode_count, nx, ny)
         out[component] = np.moveaxis(values, 0, -1)
     return out
@@ -669,7 +678,7 @@ def _local_fields_to_global(fields: dict[str, np.ndarray], *, normal_axis: int) 
     axis_names = ("x", "y", "z")
     if normal_axis not in {0, 1, 2}:
         raise ValueError("normal_axis must be 0, 1, or 2")
-    local_to_global = tuple(axis for axis in range(3) if axis != normal_axis) + (normal_axis,)
+    local_to_global = (*(axis for axis in range(3) if axis != normal_axis), normal_axis)
     out: dict[str, np.ndarray] = {}
     for prefix in ("E", "H"):
         for local_axis, global_axis in enumerate(local_to_global):
@@ -736,6 +745,7 @@ def _default_initial_vector(size: int, shape: tuple[int, int] | None = None) -> 
             vector[0, :, :] = 0
         if ny > 1:
             vector[:, 0, :] = 0
-        return np.vstack(vector).flatten("F")
+        stacked = np.concatenate(tuple(vector[ix, :, :] for ix in range(nx)), axis=0)
+        return stacked.flatten("F")
     index = np.arange(1, size + 1, dtype=float)
     return np.sin(0.37 * index) + 1j * np.cos(0.53 * index)

@@ -101,11 +101,11 @@ impl SparseMatrix {
         let mut columns = (0..self.cols)
             .map(|_| BTreeMap::<usize, Complex64>::new())
             .collect::<Vec<_>>();
-        for col in 0..self.cols {
+        for (col, column) in columns.iter_mut().enumerate().take(self.cols) {
             for (row, value) in self.column_entries(col) {
-                columns[col].insert(row, value);
+                column.insert(row, value);
             }
-            *columns[col].entry(col).or_insert(Complex64::new(0.0, 0.0)) -= shift;
+            *column.entry(col).or_insert(Complex64::new(0.0, 0.0)) -= shift;
         }
         Self::from_column_maps(self.rows, self.cols, columns)
     }
@@ -132,12 +132,12 @@ impl SparseMatrix {
         let mut columns = (0..self.cols)
             .map(|_| BTreeMap::<usize, Complex64>::new())
             .collect::<Vec<_>>();
-        for col in 0..self.cols {
+        for (col, column) in columns.iter_mut().enumerate().take(self.cols) {
             for (row, value) in self.column_entries(col) {
-                *columns[col].entry(row).or_insert(Complex64::new(0.0, 0.0)) += value;
+                *column.entry(row).or_insert(Complex64::new(0.0, 0.0)) += value;
             }
             for (row, value) in other.column_entries(col) {
-                *columns[col].entry(row).or_insert(Complex64::new(0.0, 0.0)) += value;
+                *column.entry(row).or_insert(Complex64::new(0.0, 0.0)) += value;
             }
         }
         Self::from_column_maps(self.rows, self.cols, columns)

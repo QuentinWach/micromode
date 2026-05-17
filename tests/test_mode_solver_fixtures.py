@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
+from benchmarks.compare_mode_solver_fixtures import _compare_local_case
 from benchmarks.mode_solver.fixtures import (
     data_path,
     load_data_array,
@@ -14,7 +14,6 @@ from benchmarks.mode_solver.fixtures import (
     sha256_file,
     summary_path,
 )
-from benchmarks.compare_mode_solver_fixtures import _compare_local_case
 
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE_FIXTURE_ROOT = ROOT / "fixtures" / "mode_solver" / "smoke"

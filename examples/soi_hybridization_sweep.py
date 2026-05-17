@@ -13,8 +13,6 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-
 
 WAVELENGTH_UM = 1.55
 FREQ_1550 = mm.C_0 / WAVELENGTH_UM
@@ -118,7 +116,7 @@ def soi_ridge_materials(
 ) -> tuple[mm.Materials, np.ndarray]:
     x = 0.5 * (x_edges[:-1] + x_edges[1:])
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
-    xx, yy = np.meshgrid(x, y, indexing="ij")
+    _xx, yy = np.meshgrid(x, y, indexing="ij")
     eps = np.where(yy < 0.0, N_SIO2**2, N_AIR**2).astype(np.complex128)
     silicon_fill = rectangle_fill_fraction(
         x_edges=x_edges,
@@ -164,14 +162,8 @@ def write_summary(path: Path, sweep: mm.Sweep, args: argparse.Namespace) -> Path
         "y_step_um": args.y_step,
         "width_um": sweep.values.tolist(),
         "n_eff": sweep.n_eff.tolist(),
-        "pol_fraction": {
-            key: value.tolist()
-            for key, value in sweep.pol_fraction.items()
-        },
-        "pol_fraction_waveguide": {
-            key: value.tolist()
-            for key, value in sweep.pol_fraction_waveguide.items()
-        },
+        "pol_fraction": {key: value.tolist() for key, value in sweep.pol_fraction.items()},
+        "pol_fraction_waveguide": {key: value.tolist() for key, value in sweep.pol_fraction_waveguide.items()},
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
@@ -462,7 +454,7 @@ def electric_magnitude_image(
     magnitude_squared = np.abs(ex) ** 2
     for component in ("Ey", "Ez"):
         other_dims, other_coords, values = component_image(result, component, mode_index)
-        coords_match = all(len(a) == len(b) and np.allclose(a, b) for a, b in zip(coords, other_coords))
+        coords_match = all(len(a) == len(b) and np.allclose(a, b) for a, b in zip(coords, other_coords, strict=True))
         if other_dims != dims or not coords_match:
             raise ValueError("field components are not colocated")
         magnitude_squared += np.abs(values) ** 2

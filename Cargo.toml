@@ -32,3 +32,7 @@ rlu = "0.7"
 default = []
 python = ["pyo3"]
 extension-module = ["python", "pyo3/extension-module"]
+
+[lints.clippy]
+needless_range_loop = "allow"
+too_many_arguments = "allow"

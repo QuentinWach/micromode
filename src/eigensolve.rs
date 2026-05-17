@@ -151,7 +151,7 @@ fn selected_sparse_shift_invert_native_eigenpairs_impl(
         initial_vector,
         options,
         "native_shift_invert",
-        profile.as_deref_mut(),
+        profile,
         |input, output| factorization.solve_into(input, output, &mut solve_workspace),
     )
 }
@@ -171,7 +171,8 @@ where
 {
     let n = mat.rows;
     let krylov_dim = options.krylov_dim.min(n).max(num_modes + 2);
-    let checkpoint_start = krylov_dim.min(((3 * krylov_dim + 3) / 4).max((num_modes + 8).max(16)));
+    let checkpoint_start =
+        krylov_dim.min((3 * krylov_dim).div_ceil(4).max((num_modes + 8).max(16)));
     let checkpoint_interval = 4;
     let stability_tolerance = options.tolerance.sqrt();
     let mut previous_checkpoint_values: Option<Vec<Complex64>> = None;
@@ -221,7 +222,7 @@ where
 
         let exhausted = norm <= options.tolerance || col + 1 == krylov_dim;
         let checkpoint_due = actual_dim >= checkpoint_start
-            && ((actual_dim - checkpoint_start) % checkpoint_interval == 0 || exhausted);
+            && ((actual_dim - checkpoint_start).is_multiple_of(checkpoint_interval) || exhausted);
         if checkpoint_due {
             let candidates = candidate_eigenpairs_from_hessenberg(
                 mat,
@@ -263,7 +264,7 @@ where
         guess_value,
         backend,
         options.tolerance,
-        profile.as_deref_mut(),
+        profile,
     )
 }
 

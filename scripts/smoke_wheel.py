@@ -20,8 +20,8 @@ def main() -> None:
 
     result = mm.solve_grid(
         eps_xx=eps,
-        x_edges=x_edges,
-        y_edges=y_edges,
+        x_edges=tuple(float(value) for value in x_edges),
+        y_edges=tuple(float(value) for value in y_edges),
         wavelength=1.55,
         num_modes=1,
         target_neff=2.4,
