@@ -43,7 +43,11 @@ def main() -> None:
         )
     require("--compatibility pypi" in publish_workflow, "publish workflow must request PyPI-compatible wheels")
     require("--auditwheel repair" in publish_workflow, "Linux release wheels must be auditwheel-repaired")
-    require("--require-platform macosx manylinux" in publish_workflow, "release artifact check must require macOS and manylinux wheels")
+    require("windows-latest" in publish_workflow, "publish workflow is missing Windows wheel builds")
+    require(
+        "--require-platform macosx manylinux win" in publish_workflow,
+        "release artifact check must require macOS, manylinux, and Windows wheels",
+    )
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     require(project["version"] in changelog, "Python version is not mentioned in CHANGELOG.md")

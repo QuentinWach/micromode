@@ -71,6 +71,5 @@ checks metadata, and publishes to PyPI using Trusted Publishing.
 
 ## Current Wheel Scope
 
-The release workflow builds macOS and Linux wheels for Python 3.10 through
-3.13. Windows wheels are intentionally not enabled yet; add Windows once the
-portable backend has release coverage on that target.
+The release workflow builds Linux, macOS, and Windows wheels for Python 3.10
+through 3.13.
