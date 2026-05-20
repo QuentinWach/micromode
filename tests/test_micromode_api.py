@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -7,11 +10,25 @@ import xarray as xr
 import micromode as mm
 
 
-def _strip_grid(nx: int = 5, ny: int = 4) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    x_edges = np.linspace(-1.0, 1.0, nx + 1)
-    y_edges = np.linspace(-0.8, 0.8, ny + 1)
-    x_centers = (x_edges[:-1] + x_edges[1:]) / 2
-    y_centers = (y_edges[:-1] + y_edges[1:]) / 2
+def _linspace_edges(start: float, stop: float, count: int) -> tuple[float, ...]:
+    return tuple(float(value) for value in np.linspace(start, stop, count))
+
+
+def _edge_centers(edges: Sequence[float]) -> np.ndarray:
+    edge_array = np.asarray(edges, dtype=float)
+    return (edge_array[:-1] + edge_array[1:]) / 2
+
+
+def _solver_info(data: mm.Result) -> dict[str, Any]:
+    assert data.solver_info is not None
+    return data.solver_info
+
+
+def _strip_grid(nx: int = 5, ny: int = 4) -> tuple[np.ndarray, tuple[float, ...], tuple[float, ...]]:
+    x_edges = _linspace_edges(-1.0, 1.0, nx + 1)
+    y_edges = _linspace_edges(-0.8, 0.8, ny + 1)
+    x_centers = _edge_centers(x_edges)
+    y_centers = _edge_centers(y_edges)
     xx, yy = np.meshgrid(x_centers, y_centers, indexing="ij")
     eps = np.where((np.abs(xx) <= 0.35) & (np.abs(yy) <= 0.25), 3.4**2, 1.44**2)
     return eps, x_edges, y_edges
@@ -35,10 +52,11 @@ def test_grid_api_solves_with_rust_sparse_backend():
     assert data.n_complex.values[0, 0].real >= data.n_complex.values[0, 1].real
     assert data.field_components["Ex"].shape == (6, 5, 1, 1, 2)
     assert set(data.field_components) == {"Ex", "Ey", "Ez", "Hx", "Hy", "Hz"}
-    assert data.solver_info["runs"][0]["phase_convention"] == "dominant_e_real_positive"
-    assert data.solver_info["runs"][0]["normalization"] == "lorentz_orthogonal_unit_transverse_power"
-    np.testing.assert_allclose(data.solver_info["runs"][0]["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
-    assert data.solver_info["runs"][0]["lorentz_orthogonality_error"] < 1e-8
+    run_info = _solver_info(data)["runs"][0]
+    assert run_info["phase_convention"] == "dominant_e_real_positive"
+    assert run_info["normalization"] == "lorentz_orthogonal_unit_transverse_power"
+    np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
+    assert run_info["lorentz_orthogonality_error"] < 1e-8
     assert abs(abs(data.overlap(mode_index=0, kind="power", normalize=False)) - 1.0) < 1e-10
     lorentz_matrix = data.overlap_matrix(kind="lorentz").values
     np.testing.assert_allclose(lorentz_matrix - np.diag(np.diag(lorentz_matrix)), 0.0, atol=1e-8)
@@ -77,8 +95,8 @@ def test_materials_api_matches_component_api_for_diagonal_grid():
 
 
 def test_materials_api_accepts_full_tensor_grid():
-    x_edges = np.linspace(-1.0, 1.0, 5)
-    y_edges = np.linspace(-0.8, 0.8, 4)
+    x_edges = _linspace_edges(-1.0, 1.0, 5)
+    y_edges = _linspace_edges(-0.8, 0.8, 4)
     shape = (len(x_edges) - 1, len(y_edges) - 1)
     eps_xx = np.full(shape, 2.2**2)
     eps_yy = np.full(shape, 2.0**2)
@@ -126,27 +144,30 @@ def test_solver_specs_report_diagnostics_and_persist_to_hdf5(tmp_path):
         krylov_dim=18,
     )
 
-    assert data.solver_info["pml"]["num_cells"] == (1, 1)
-    assert data.solver_info["pml"]["sigma_max"] == pytest.approx(1.6)
-    assert data.solver_info["boundary"]["low"] == ("pec", "pmc")
-    assert data.solver_info["backend"]
-    assert data.solver_info["runs"][0]["operator_size"] > 0
-    assert data.solver_info["runs"][0]["operator_nnz"] > 0
-    assert len(data.solver_info["runs"][0]["residuals"]) == 1
-    assert data.solver_info["runs"][0]["power_norms"][0] == pytest.approx(1.0)
-    assert len(data.solver_info["runs"][0]["lorentz_norms"]) == 1
+    solver_info = _solver_info(data)
+    run_info = solver_info["runs"][0]
+    assert solver_info["pml"]["num_cells"] == (1, 1)
+    assert solver_info["pml"]["sigma_max"] == pytest.approx(1.6)
+    assert solver_info["boundary"]["low"] == ("pec", "pmc")
+    assert solver_info["backend"]
+    assert run_info["operator_size"] > 0
+    assert run_info["operator_nnz"] > 0
+    assert len(run_info["residuals"]) == 1
+    assert run_info["power_norms"][0] == pytest.approx(1.0)
+    assert len(run_info["lorentz_norms"]) == 1
 
     loaded = mm.Result.from_hdf5(data.to_hdf5(tmp_path / "diagnostic_result.h5"))
-    assert loaded.solver_info["pml"]["num_cells"] == [1, 1]
-    assert loaded.solver_info["boundary"]["low"] == ["pec", "pmc"]
-    assert loaded.solver_info["runs"][0]["operator_size"] == data.solver_info["runs"][0]["operator_size"]
+    loaded_solver_info = _solver_info(loaded)
+    assert loaded_solver_info["pml"]["num_cells"] == [1, 1]
+    assert loaded_solver_info["boundary"]["low"] == ["pec", "pmc"]
+    assert loaded_solver_info["runs"][0]["operator_size"] == run_info["operator_size"]
 
 
 def test_slice_api_solves_1d_x_slice_and_matches_single_cell_grid(tmp_path):
-    x_edges = np.linspace(-1.0, 1.0, 9)
-    x_centers = (x_edges[:-1] + x_edges[1:]) / 2
+    x_edges = _linspace_edges(-1.0, 1.0, 9)
+    x_centers = _edge_centers(x_edges)
     eps = np.where(np.abs(x_centers) <= 0.3, 3.4**2, 1.44**2)
-    y_edges = np.asarray([-0.125, 0.125])
+    y_edges = (-0.125, 0.125)
 
     sliced = mm.solve_slice(
         eps_xx=eps,
@@ -190,7 +211,7 @@ def test_slice_api_solves_1d_x_slice_and_matches_single_cell_grid(tmp_path):
 
 
 def test_materials_slice_api_supports_y_axis_and_tensor_components():
-    y_edges = np.linspace(-0.8, 0.8, 7)
+    y_edges = _linspace_edges(-0.8, 0.8, 7)
     shape = (len(y_edges) - 1,)
     eps_xx = np.full(shape, 2.2**2)
     eps_yy = np.full(shape, 2.0**2)
@@ -223,8 +244,8 @@ def test_materials_slice_api_supports_y_axis_and_tensor_components():
 
 
 def test_y_normal_solve_returns_global_component_names():
-    z_edges = np.linspace(-1.0, 1.0, 9)
-    z_centers = (z_edges[:-1] + z_edges[1:]) / 2
+    z_edges = _linspace_edges(-1.0, 1.0, 9)
+    z_centers = _edge_centers(z_edges)
     eps = np.where(np.abs(z_centers) <= 0.3, 3.4**2, 1.44**2)
 
     data = mm.solve_slice(
@@ -247,9 +268,60 @@ def test_y_normal_solve_returns_global_component_names():
     assert np.linalg.norm(data.field_components["Ez"].values) > 0
 
 
+def test_x_normal_solve_returns_global_component_names_and_positive_power():
+    y_edges = _linspace_edges(-1.0, 1.0, 7)
+    z_edges = _linspace_edges(-0.8, 0.8, 6)
+    y_centers = _edge_centers(y_edges)
+    z_centers = _edge_centers(z_edges)
+    yy, zz = np.meshgrid(y_centers, z_centers, indexing="ij")
+    eps = np.where((np.abs(yy) <= 0.35) & (np.abs(zz) <= 0.25), 3.4**2, 1.44**2)
+
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=y_edges,
+        y_edges=z_edges,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        normal_axis=0,
+        krylov_dim=16,
+    )
+
+    assert data.field_components["Ey"].dims[:3] == ("y", "z", "x")
+    assert data.field_components["Ey"].attrs["normal_dim"] == "x"
+    assert np.linalg.norm(data.field_components["Ey"].values) > 0
+    assert np.linalg.norm(data.field_components["Ez"].values) > 0
+
+    power = data.overlap(mode_index=0, kind="power", normalize=False)
+    assert power.real > 0
+    assert abs(abs(power) - 1.0) < 1e-10
+
+
+def test_y_normal_power_overlap_is_positive():
+    z_edges = _linspace_edges(-1.0, 1.0, 9)
+    z_centers = _edge_centers(z_edges)
+    eps = np.where(np.abs(z_centers) <= 0.3, 3.4**2, 1.44**2)
+
+    data = mm.solve_slice(
+        eps_xx=eps,
+        coord_edges=z_edges,
+        axis="y",
+        invariant_width=0.5,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        normal_axis=1,
+        krylov_dim=16,
+    )
+
+    power = data.overlap(mode_index=0, kind="power", normalize=False)
+    assert power.real > 0
+    assert abs(abs(power) - 1.0) < 1e-10
+
+
 def test_materials_subpixel_averaging_helpers():
-    x_edges = np.linspace(-1.0, 1.0, 3)
-    y_edges = np.linspace(-0.5, 0.5, 3)
+    x_edges = _linspace_edges(-1.0, 1.0, 3)
+    y_edges = _linspace_edges(-0.5, 0.5, 3)
     samples = np.asarray(
         [
             [1.0, 3.0, 5.0, 7.0],
@@ -303,8 +375,8 @@ def test_angle_and_bend_use_tensorial_rust_path():
 
 
 def test_full_tensor_grid_supports_angle_and_bend_transform():
-    x_edges = np.linspace(-1.0, 1.0, 5)
-    y_edges = np.linspace(-0.8, 0.8, 4)
+    x_edges = _linspace_edges(-1.0, 1.0, 5)
+    y_edges = _linspace_edges(-0.8, 0.8, 4)
     shape = (len(x_edges) - 1, len(y_edges) - 1)
     materials = mm.Materials.from_components(
         eps_xx=np.full(shape, 2.2**2),
@@ -328,7 +400,7 @@ def test_full_tensor_grid_supports_angle_and_bend_transform():
         krylov_dim=18,
     )
 
-    assert data.solver_info["runs"][0]["backend_kind"] == "tensorial_sparse"
+    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_sparse"
     assert np.isfinite(data.n_complex.values).all()
     assert np.isfinite(data.field_components["Ex"].values).all()
 
@@ -390,6 +462,27 @@ def test_result_metrics_io_plotting_and_overlap(tmp_path):
     assert fig is not None
     assert axes.size >= 3
     plt.close("all")
+
+
+def test_result_from_hdf5_accepts_bytes_solver_info(tmp_path):
+    eps, x_edges, y_edges = _strip_grid(6, 5)
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        krylov_dim=16,
+    )
+    path = data.to_hdf5(tmp_path / "bytes_solver_info.h5")
+
+    import h5py
+
+    with h5py.File(path, "a") as handle:
+        handle.attrs["solver_info"] = b'{"ok": true}'
+
+    assert mm.Result.from_hdf5(path).solver_info == {"ok": True}
 
 
 def test_result_overlap_for_synthetic_orthogonal_modes():
@@ -473,6 +566,8 @@ def test_spec_validation_for_core_options():
         boundary=mm.BoundarySpec(low=("pmc", "pec")),
     )
 
+    assert isinstance(spec.pml, mm.PmlSpec)
+    assert isinstance(spec.boundary, mm.BoundarySpec)
     assert spec.pml.num_cells == (1, 2)
     assert spec.pml.sigma_max == pytest.approx(1.5)
     assert spec.boundary.dmin_pmc == (True, False)

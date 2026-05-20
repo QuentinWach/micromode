@@ -68,11 +68,7 @@ def _read_xarray_group(group: Any) -> xr.DataArray:
     if _XARRAY_VALUE_NAME not in group:
         raise KeyError(f"HDF5 group {group.name!r} is missing {_XARRAY_VALUE_NAME!r}")
     values = group[_XARRAY_VALUE_NAME][()]
-    coords = {
-        name: group[name][()]
-        for name in group.keys()
-        if name != _XARRAY_VALUE_NAME and hasattr(group[name], "shape")
-    }
+    coords = {name: group[name][()] for name in group if name != _XARRAY_VALUE_NAME and hasattr(group[name], "shape")}
     dims = _infer_dims(values.shape, coords)
     xarray_coords = {dim: coords[dim] for dim in dims if dim in coords}
     return xr.DataArray(values, dims=dims, coords=xarray_coords)
@@ -80,7 +76,7 @@ def _read_xarray_group(group: Any) -> xr.DataArray:
 
 def _infer_dims(shape: tuple[int, ...], coords: dict[str, np.ndarray]) -> tuple[str, ...]:
     dims = tuple(dim for dim in _PREFERRED_DIMS if dim in coords)
-    if len(dims) == len(shape) and all(len(coords[dim]) == size for dim, size in zip(dims, shape)):
+    if len(dims) == len(shape) and all(len(coords[dim]) == size for dim, size in zip(dims, shape, strict=True)):
         return dims
 
     exact = [dim for dim in _PREFERRED_DIMS if dim in coords and len(coords[dim]) in set(shape)]

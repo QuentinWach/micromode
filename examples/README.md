@@ -38,12 +38,22 @@ That example sweeps a 220 nm fully etched SOI ridge width and writes the
 effective-index and TE-fraction plots to
 `examples/soi_hybridization_outputs/`.
 
-Run the README ridge-waveguide example:
+Recreate the Tidy3D modal sources/monitors mode plot:
+
+```bash
+uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
+```
+
+That example uses the strip-waveguide geometry from the Tidy3D modal
+sources/monitors notebook and writes `|Ey|` and `|Ez|` field plots for the first
+three modes to `examples/tidy3d_modal_outputs/`.
+
+Run the README angled-slab waveguide example:
 
 ```bash
 uv run --extra dev python examples/ridge_waveguide_readme.py
 ```
 
-That example rasterizes a 220 nm SOI rib waveguide with a 90 nm slab, 500 nm
-top ridge width, inverted angled sidewalls, and subpixel material averaging.
+That example rasterizes a 220 nm silicon slab with 500 nm top width and 80
+degree angled sidewalls on an oxide substrate with air around it.
 It writes publication-style plots to `examples/ridge_waveguide_outputs/`.

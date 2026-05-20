@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 try:
-    import tomllib
+    import tomllib  # type: ignore[import-not-found]
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility.
     import tomli as tomllib
 
@@ -56,10 +56,8 @@ def main() -> None:
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     require(project["version"] in changelog, "Python version is not mentioned in CHANGELOG.md")
-    require(
-        re.fullmatch(r"\d+\.\d+\.\d+(a\d+|b\d+|rc\d+)?", project["version"]),
-        f"Python version {project['version']!r} is not a normal PyPI release version",
-    )
+    version_match = re.fullmatch(r"\d+\.\d+\.\d+(a\d+|b\d+|rc\d+)?", project["version"])
+    require(version_match is not None, f"Python version {project['version']!r} is not a normal PyPI release version")
     require_tag_matches_version(project["version"])
     print(f"release metadata looks ready for micromode {project['version']}")
 
@@ -71,7 +69,8 @@ def load_toml(path: str) -> dict:
 
 def python_to_cargo_version(version: str) -> str:
     match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?", version)
-    require(match is not None, f"Python version {version!r} is not a supported release version")
+    if match is None:
+        raise ValueError(f"Python version {version!r} is not a supported release version")
     base, phase, number = match.groups()
     if phase is None:
         return base

@@ -349,7 +349,7 @@ pub fn create_sfactor_f(
 ) -> Vec<Complex64> {
     let mut sfactor = vec![Complex64::new(1.0, 0.0); n];
     for (i, value) in sfactor.iter_mut().enumerate() {
-        if i <= n_pml - 1 && dmin_pml {
+        if i < n_pml && dmin_pml {
             *value = s_value(
                 dls[0],
                 (n_pml as f64 - i as f64 - 0.5) / n_pml as f64,

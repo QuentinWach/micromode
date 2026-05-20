@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Sequence
+from typing import Literal
 
 import numpy as np
 
@@ -38,12 +39,20 @@ class PmlSpec:
         object.__setattr__(self, "order", int(self.order))
 
     @classmethod
-    def from_num_cells(cls, num_cells: tuple[int, int]) -> "PmlSpec":
+    def from_num_cells(cls, num_cells: tuple[int, int]) -> PmlSpec:
         return cls(num_cells=num_cells)
 
     def as_dict(self) -> dict[str, float | int | tuple[int, int]]:
         return {
             "num_cells": self.num_cells,
+            "sigma_max": self.sigma_max,
+            "kappa_min": self.kappa_min,
+            "kappa_max": self.kappa_max,
+            "order": self.order,
+        }
+
+    def profile_dict(self) -> dict[str, float | int]:
+        return {
             "sigma_max": self.sigma_max,
             "kappa_min": self.kappa_min,
             "kappa_max": self.kappa_max,
@@ -68,11 +77,11 @@ class BoundarySpec:
 
     @property
     def dmin_pmc(self) -> tuple[bool, bool]:
-        return tuple(value == "pmc" for value in self.low)
+        return self.low[0] == "pmc", self.low[1] == "pmc"
 
     @property
     def dmin_pml(self) -> tuple[bool, bool]:
-        return tuple(value == "pec" for value in self.low)
+        return self.low[0] == "pec", self.low[1] == "pec"
 
     def as_dict(self) -> dict[str, tuple[str, str]]:
         return {"low": self.low}
@@ -155,7 +164,7 @@ class Materials:
         mu_zz: np.ndarray | None = None,
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
-    ) -> "Materials":
+    ) -> Materials:
         grid = Grid(
             tuple(float(value) for value in x_edges),
             tuple(float(value) for value in y_edges),
@@ -170,7 +179,9 @@ class Materials:
             np.ones(grid.shape, dtype=np.complex128) if mu_yy is None else mu_yy,
             np.ones(grid.shape, dtype=np.complex128) if mu_zz is None else mu_zz,
         )
-        return cls(grid=grid, eps_tensor=_diagonal_to_full_tensor(eps_diag), mu_tensor=_diagonal_to_full_tensor(mu_diag))
+        return cls(
+            grid=grid, eps_tensor=_diagonal_to_full_tensor(eps_diag), mu_tensor=_diagonal_to_full_tensor(mu_diag)
+        )
 
     @classmethod
     def from_components(
@@ -198,7 +209,7 @@ class Materials:
         mu_zy: np.ndarray | None = None,
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
-    ) -> "Materials":
+    ) -> Materials:
         grid = Grid(
             tuple(float(value) for value in x_edges),
             tuple(float(value) for value in y_edges),
@@ -267,7 +278,7 @@ class Materials:
         mu_zy: np.ndarray | None = None,
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
-    ) -> "Materials":
+    ) -> Materials:
         """Build a one-dimensional mode slice.
 
         ``axis="x"`` makes the supplied material arrays vary along the first
@@ -299,10 +310,13 @@ class Materials:
                 raise ValueError(f"{label} must have shape {(cell_count,)} for a one-dimensional slice")
             return array[:, None] if axis_index == 0 else array[None, :]
 
+        expanded_eps_xx = expand("eps_xx", eps_xx)
+        if expanded_eps_xx is None:
+            raise ValueError("eps_xx is required")
         return cls.from_components(
             x_edges=x_edges,
             y_edges=y_edges,
-            eps_xx=expand("eps_xx", eps_xx),
+            eps_xx=expanded_eps_xx,
             eps_yy=expand("eps_yy", eps_yy),
             eps_zz=expand("eps_zz", eps_zz),
             eps_xy=expand("eps_xy", eps_xy),
@@ -340,7 +354,7 @@ class Materials:
         average: AverageMethod = "arithmetic",
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
-    ) -> "Materials":
+    ) -> Materials:
         """Build a grid from higher-resolution samples inside each solver cell.
 
         The sample arrays may either have shape ``(nx * sx, ny * sy)`` or
@@ -406,10 +420,7 @@ class Materials:
         elif array.shape == (nx, ny, sx, sy):
             grouped = array
         else:
-            raise ValueError(
-                "subpixel values must have shape "
-                f"{(nx * sx, ny * sy)} or {(nx, ny, sx, sy)}"
-            )
+            raise ValueError(f"subpixel values must have shape {(nx * sx, ny * sy)} or {(nx, ny, sx, sy)}")
 
         if method == "arithmetic":
             return grouped.mean(axis=(2, 3))
@@ -435,16 +446,21 @@ class Materials:
     def is_diagonal(self) -> bool:
         off_diagonal = np.ones((3, 3), dtype=bool)
         np.fill_diagonal(off_diagonal, False)
+        mu_tensor = self._resolved_mu_tensor()
         return bool(
-            np.all(np.abs(self.eps_tensor[off_diagonal]) <= 1e-12)
-            and np.all(np.abs(self.mu_tensor[off_diagonal]) <= 1e-12)
+            np.all(np.abs(self.eps_tensor[off_diagonal]) <= 1e-12) and np.all(np.abs(mu_tensor[off_diagonal]) <= 1e-12)
         )
 
     def flat_eps_tensor(self) -> np.ndarray:
         return self.eps_tensor.reshape(3, 3, -1)
 
     def flat_mu_tensor(self) -> np.ndarray:
-        return self.mu_tensor.reshape(3, 3, -1)
+        return self._resolved_mu_tensor().reshape(3, 3, -1)
+
+    def _resolved_mu_tensor(self) -> np.ndarray:
+        if self.mu_tensor is None:
+            raise RuntimeError("mu_tensor was not initialized")
+        return self.mu_tensor
 
     def diagonal_eps(self) -> np.ndarray:
         return np.stack([self.eps_tensor[axis, axis] for axis in range(3)], axis=0)

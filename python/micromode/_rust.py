@@ -9,11 +9,14 @@ import numpy as np
 
 C_0 = 2.997_924_58e14
 EPSILON_0 = 8.854187812800384e-18
+SparseSolveResult = tuple[np.ndarray, list[np.ndarray], dict[str, object]]
 
 
 try:
     from ._core import (
         solve_diagonal_sparse_py as _solve_diagonal_sparse,
+    )
+    from ._core import (
         solve_tensorial_sparse_py as _solve_tensorial_sparse,
     )
 except Exception:  # pragma: no cover - exercised when extension is not built locally.
@@ -38,7 +41,7 @@ def solve_diagonal_sparse(
     dmin_pmc: tuple[bool, bool] = (False, False),
     krylov_dim: int = 32,
     initial_vector: np.ndarray | None = None,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+) -> SparseSolveResult:
     """Run the Rust sparse diagonal mode solver for a prepared 2D Yee grid."""
     # This is the normal path for diagonal material grids. The returned fields
     # are still flattened by mode/component; `raster.py` restores grid axes.
@@ -92,14 +95,18 @@ def solve_diagonal_sparse(
     )
     n_complex = _pairs_to_complex(n_pairs)
     fields = [_pairs_to_complex(component) for component in field_pairs]
-    return n_complex, fields, _solver_info(
-        residuals,
-        power_norms,
-        lorentz_norms,
-        lorentz_orthogonality_error,
-        backend,
-        operator_size,
-        operator_nnz,
+    return (
+        n_complex,
+        fields,
+        _solver_info(
+            residuals,
+            power_norms,
+            lorentz_norms,
+            lorentz_orthogonality_error,
+            backend,
+            operator_size,
+            operator_nnz,
+        ),
     )
 
 
@@ -120,7 +127,7 @@ def solve_tensorial_sparse(
     dmin_pmc: tuple[bool, bool] = (False, False),
     krylov_dim: int = 32,
     initial_vector: np.ndarray | None = None,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+) -> SparseSolveResult:
     """Run the Rust sparse full-tensor mode solver for a prepared 2D Yee grid."""
     # Full tensor material grids, angled solves, and bent solves use this path
     # because coordinate transforms can introduce off-diagonal eps/mu terms.
@@ -174,14 +181,18 @@ def solve_tensorial_sparse(
     )
     n_complex = _pairs_to_complex(n_pairs)
     fields = [_pairs_to_complex(component) for component in field_pairs]
-    return n_complex, fields, _solver_info(
-        residuals,
-        power_norms,
-        lorentz_norms,
-        lorentz_orthogonality_error,
-        backend,
-        operator_size,
-        operator_nnz,
+    return (
+        n_complex,
+        fields,
+        _solver_info(
+            residuals,
+            power_norms,
+            lorentz_norms,
+            lorentz_orthogonality_error,
+            backend,
+            operator_size,
+            operator_nnz,
+        ),
     )
 
 

@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.0a3 - Unreleased
+## 0.1.0a4 - Unreleased
+
+- Fixed y-normal field mapping so returned global fields use a right-handed
+  basis and physical +y power overlap is positive.
+- Added a regression test for y-normal power-overlap sign.
+
+## 0.1.0a3
 
 Initial alpha release candidate.
 

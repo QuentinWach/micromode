@@ -114,10 +114,7 @@ def main() -> None:
         report["cases"].append({"case_id": entry["case_id"], **status})
 
     print(f"Inspected {len(entries)} fixture(s) from {fixture_root}")
-    print(
-        "Local validation: "
-        + ", ".join(f"{key}={value}" for key, value in report["summary"].items() if value)
-    )
+    print("Local validation: " + ", ".join(f"{key}={value}" for key, value in report["summary"].items() if value))
     if args.report_json is not None:
         args.report_json.parent.mkdir(parents=True, exist_ok=True)
         args.report_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
@@ -325,11 +322,13 @@ _LOCAL_CASES = {
 _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 
 
-def _solver_edges_from_field_coords(edges: tuple[np.ndarray, np.ndarray], recipe: dict) -> tuple[np.ndarray, np.ndarray]:
+def _solver_edges_from_field_coords(
+    edges: tuple[np.ndarray, np.ndarray], recipe: dict
+) -> tuple[np.ndarray, np.ndarray]:
     dmin_pmc = tuple(bool(value) for value in recipe.get("dmin_pmc", (False, False)))
     trim_edges = tuple(recipe.get("trim_edges", ((0, 0), (0, 0))))
     out = []
-    for axis_edges, has_min_symmetry, (trim_start, trim_end) in zip(edges, dmin_pmc, trim_edges):
+    for axis_edges, has_min_symmetry, (trim_start, trim_end) in zip(edges, dmin_pmc, trim_edges, strict=True):
         if not has_min_symmetry:
             trimmed = axis_edges
             if trim_start or trim_end:
@@ -488,7 +487,7 @@ def _eps_from_recipe(
         mask = np.ones(eps.shape, dtype=bool)
         center = box.get("center", (0.0, 0.0, 0.0))
         size = box["size"]
-        for grid, dim in zip(grids, tangent_dims):
+        for grid, dim in zip(grids, tangent_dims, strict=True):
             axis = _AXIS_INDEX[dim]
             mask &= np.abs(grid - center[axis]) <= abs(size[axis]) / 2
         eps_value = complex(box["eps"])
@@ -500,7 +499,7 @@ def _eps_from_recipe(
         center = circle.get("center", (0.0, 0.0, 0.0))
         radius = float(circle["radius"])
         distance_sq = np.zeros(eps.shape, dtype=float)
-        for grid, dim in zip(grids, tangent_dims):
+        for grid, dim in zip(grids, tangent_dims, strict=True):
             distance_sq += (grid - center[_AXIS_INDEX[dim]]) ** 2
         eps[distance_sq <= radius * radius] = complex(circle["eps"])
     return eps

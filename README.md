@@ -57,6 +57,33 @@ data.plot_field("Ex", mode_index=0)
 data.to_hdf5("modes.h5")
 ```
 
+## Examples
+
+
+### Tidy3D Waveguide
+![Tidy3D modal monitor example](docs/assets/tidy3d_modal_modes.png)
+
+The Tidy3D modal monitor example recreates the strip-waveguide setup from
+Flexcompute's modal sources and monitors notebook. It solves the first three
+x-propagating modes of a silicon waveguide on a silica substrate and plots
+`|Ey|` and `|Ez|` on the same y-z mode plane. (See [Tidy3D, "Defining Mode Sources and Monitors"](https://www.flexcompute.com/tidy3d/examples/notebooks/ModalSourcesMonitors/).)
+
+```bash
+uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
+```
+
+### Hybridization Sweep
+![Hybridization sweep example](docs/assets/hybridization_sweep.png)
+
+The SOI hybridization example sweeps the width of a 220 nm silicon ridge and
+solves several modes at each step. It shows how nearby modes exchange character
+as the geometry changes by plotting effective index and TE fraction across the
+sweep, then rendering representative field profiles.
+
+```bash
+uv run --extra dev python examples/soi_hybridization_sweep.py
+```
+
 
 ## Physics
 
