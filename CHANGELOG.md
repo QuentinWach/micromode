@@ -1,10 +1,18 @@
 # Changelog
 
-## 0.1.0a4 - Unreleased
+## 0.1.0a4 - 2026-05-20
 
 - Fixed y-normal field mapping so returned global fields use a right-handed
   basis and physical +y power overlap is positive.
-- Added a regression test for y-normal power-overlap sign.
+- Added regression coverage for the y-normal power-overlap sign and tightened
+  API type-checking coverage.
+- Added a Tidy3D modal sources and monitors example with README documentation
+  and refreshed generated documentation assets.
+- Updated the ridge-waveguide README example to show an angled slab on a
+  substrate with complex fundamental mode fields.
+- Added stricter lint, type-check, and release metadata checks to CI.
+- Hardened example input validation, HDF5 solver metadata loading, and sparse
+  solver edge-case handling.
 
 ## 0.1.0a3
 
