@@ -16,10 +16,10 @@ $$
 
 Here:
 
-- \(\mathbf{r}\) is position in the local mode-coordinate system;
-- \(\mathbf{E}\) and \(\mathbf{H}\) are the electric and magnetic mode fields;
-- \(\omega\) is the angular frequency;
-- \(\epsilon\) and \(\mu\) are the supplied material tensors.
+- $\mathbf{r}$ is position in the local mode-coordinate system;
+- $\mathbf{E}$ and $\mathbf{H}$ are the electric and magnetic mode fields;
+- $\omega$ is the angular frequency;
+- $\epsilon$ and $\mu$ are the supplied material tensors.
 
 Unlike a driven FDFD field solve, MicroMode is a mode solver: there are no
 electric or magnetic current sources. It assumes fields vary along the local
@@ -31,14 +31,14 @@ $$
 \mathbf{H}(x, y, z) = \mathbf{h}(x, y) e^{i k_0 n_\mathrm{eff} z},
 $$
 
-where \(k_0 = 2\pi / \lambda_0\) and \(n_\mathrm{eff}\) is the unknown complex
+where $k_0 = 2\pi / \lambda_0$ and $n_\mathrm{eff}$ is the unknown complex
 effective index. The transverse fields are discretized by the
 finite-difference frequency-domain method on a regular Yee grid [2].
 
 ## Discretization
 
-The Rust kernels use relative material tensors \(\epsilon_r(x,y)\),
-\(\mu_r(x,y)\) and scale transverse derivatives by \(1/k_0\), so the sparse
+The Rust kernels use relative material tensors $\epsilon_r(x,y)$,
+$\mu_r(x,y)$ and scale transverse derivatives by $1/k_0$, so the sparse
 operators are dimensionless. On the local Yee grid, the four derivative
 matrices are
 
@@ -132,7 +132,7 @@ $$
 
 ## Tensorial Materials
 
-For full tensor media, including off-diagonal \(\epsilon\)/\(\mu\) terms and
+For full tensor media, including off-diagonal $\epsilon$/$\mu$ terms and
 angle or bend coordinate transforms, MicroMode switches to a first-order
 tensorial eigenproblem:
 
@@ -161,7 +161,7 @@ $$
 \mu_{\alpha z}\mu_{z\beta}/\mu_{zz},
 $$
 
-then \(E_z\) and \(H_z\) are reconstructed with the off-diagonal coupling terms
+then $E_z$ and $H_z$ are reconstructed with the off-diagonal coupling terms
 included. This is the path used automatically for `Materials.from_components`,
 angled solves, and bend solves whenever the transformed tensors are no longer
 diagonal.
