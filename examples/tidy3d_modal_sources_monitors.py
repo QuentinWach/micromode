@@ -91,7 +91,11 @@ def tidy3d_waveguide_materials(*, y_step: float, z_step: float) -> tuple[mm.Mate
 
 
 def centered_edges(*, width: float, step: float) -> np.ndarray:
+    if step <= 0.0:
+        raise ValueError("step must be positive")
     cells = round(width / step)
+    if cells < 1:
+        raise ValueError("width must be at least one step")
     return np.linspace(-0.5 * width, 0.5 * width, cells + 1)
 
 

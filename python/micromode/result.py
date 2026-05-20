@@ -332,7 +332,7 @@ class Result:
             n_complex = cls._read_data_array(handle["n_complex"])
             n_group = cls._read_data_array(handle["n_group"]) if "n_group" in handle else None
             dispersion = cls._read_data_array(handle["dispersion"]) if "dispersion" in handle else None
-            solver_info = json.loads(str(handle.attrs["solver_info"])) if "solver_info" in handle.attrs else None
+            solver_info = _loads_hdf5_json_attr(handle.attrs["solver_info"]) if "solver_info" in handle.attrs else None
             field_group: Any = handle["field_components"]
             field_components = {component: cls._read_data_array(group) for component, group in field_group.items()}
         return cls(
@@ -501,6 +501,12 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, (np.integer, np.floating, np.bool_)):
         return value.item()
     return value
+
+
+def _loads_hdf5_json_attr(value: Any) -> Any:
+    if isinstance(value, bytes):
+        value = value.decode("utf-8")
+    return json.loads(value)
 
 
 def _overlap_value(

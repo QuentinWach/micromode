@@ -102,12 +102,22 @@ def ridge_waveguide_materials(step: float = 0.02, subpixels: int = 7) -> tuple[m
 
 
 def centered_edges(*, width: float, step: float) -> np.ndarray:
+    if step <= 0.0:
+        raise ValueError("step must be positive")
     cells = round(width / step)
+    if cells < 1:
+        raise ValueError("width must be at least one step")
     return np.linspace(-0.5 * width, 0.5 * width, cells + 1)
 
 
 def offset_edges(*, lower: float, upper: float, step: float) -> np.ndarray:
+    if step <= 0.0:
+        raise ValueError("step must be positive")
+    if upper <= lower:
+        raise ValueError("upper must be greater than lower")
     cells = round((upper - lower) / step)
+    if cells < 1:
+        raise ValueError("upper - lower must be at least one step")
     return np.linspace(lower, upper, cells + 1)
 
 
