@@ -26,7 +26,10 @@ pub fn assemble_sparse_diagonal_operators(
     der_mats: &[SparseMatrix; 4],
 ) -> SparseDiagonalOperators {
     // Diagonal media reduce to a 2N x 2N transverse-electric eigenproblem for
-    // [Ex, Ey]. Ez and H are recovered later from Maxwell curl equations.
+    // [Ex, Ey]. The P/Q block notation follows the standard vectorial FDFD
+    // mode formulation: Q maps transverse E to transverse H up to the
+    // propagation constant, while P maps transverse H back to transverse E.
+    // Ez, Hz, and the physical H scale are reconstructed after the eigen solve.
     let n = eps[0][0].len();
     let eps_xx = &eps[0][0];
     let eps_yy = &eps[1][1];
@@ -53,6 +56,8 @@ pub fn assemble_sparse_diagonal_operators(
             .collect::<Vec<_>>(),
     );
 
+    // Material-only part of P. The signs encode z-normal cross products:
+    // transverse H couples to [Ey, -Ex] through the diagonal mu block.
     let p_mu = SparseMatrix::block_2x2(
         &zero,
         &SparseMatrix::diagonal(mu_yy),
@@ -60,6 +65,8 @@ pub fn assemble_sparse_diagonal_operators(
         &zero,
     );
 
+    // Longitudinal electric elimination. The derivative sandwich
+    // Df * inv(eps_zz) * Db is the Schur-complement contribution from Ez.
     let p00 = dxf
         .matmul(&inv_eps_zz)
         .matmul(dyb)
@@ -72,6 +79,7 @@ pub fn assemble_sparse_diagonal_operators(
     let p11 = dyf.matmul(&inv_eps_zz).matmul(dxb);
     let p_partial = SparseMatrix::block_2x2(&p00, &p01, &p10, &p11);
 
+    // Material-only part of Q. It is the epsilon-side analogue of p_mu.
     let q_ep = SparseMatrix::block_2x2(
         &zero,
         &SparseMatrix::diagonal(eps_yy),
@@ -79,6 +87,8 @@ pub fn assemble_sparse_diagonal_operators(
         &zero,
     );
 
+    // Longitudinal magnetic elimination. This mirrors p_partial with mu_zz and
+    // backward/forward derivatives swapped for Yee staggering.
     let q00 = dxb
         .matmul(&inv_mu_zz)
         .matmul(dyf)

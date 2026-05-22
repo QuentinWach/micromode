@@ -2,8 +2,8 @@
 
 `solve_modes(...)` is the main entry point. It validates the `Materials` grid,
 resolves frequencies or wavelengths, builds the Yee derivative matrices, chooses
-the diagonal or tensorial Rust backend, solves one frequency at a time, and
-returns a coordinate-aware `Result`.
+the requested backend, solves one frequency at a time, and returns a
+coordinate-aware `Result`.
 
 ## Material Grids
 
@@ -33,7 +33,8 @@ returns a coordinate-aware `Result`.
 
 ## Eigenpair Selection
 
-Internally, eigenpairs are selected with sparse shift-invert Arnoldi [1, 2].
+The production Rust backend selects eigenpairs with sparse shift-invert Arnoldi
+[1, 2].
 For a matrix \(A\) and shift \(\sigma\), Arnoldi is applied to
 
 $$
@@ -45,6 +46,11 @@ $$
 where \(\theta\) is a Ritz value of the inverse-shifted operator. The diagonal
 backend uses \(\sigma=-\texttt{target_neff}^2\); the tensorial backend uses
 \(\sigma=\texttt{target_neff}\).
+
+The optional `backend="scipy-reference"` path solves the same diagonal sparse
+operator with SciPy/ARPACK. It is limited to untransformed diagonal grids without
+PML and exists as a readable validation backend, not as the default production
+solver. Install it with `micromode[scipy]`.
 
 Returned modes are sorted by decreasing real effective index, normalized to
 unit transverse power,

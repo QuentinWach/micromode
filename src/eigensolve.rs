@@ -189,7 +189,11 @@ where
     let mut actual_dim = 0usize;
 
     for col in 0..krylov_dim {
-        // Native Arnoldi fallback with one reorthogonalization pass.
+        // Arnoldi sees only y = (A - sigma I)^-1 x. Keeping that action behind
+        // a closure makes the Krylov logic independent from the linear solver:
+        // native sparse LU here, SciPy/ARPACK in the Python reference backend.
+        // The second Gram-Schmidt pass is deliberate because clustered
+        // waveguide modes otherwise lose orthogonality quickly.
         let solve_start = profile.as_ref().map(|_| Instant::now());
         let mut work = vec![Complex64::new(0.0, 0.0); n];
         solve(q_basis.vector(col), &mut work)?;
@@ -426,8 +430,9 @@ impl SparseLu {
         matrix: &SparseMatrix,
         mut profile: Option<&mut ShiftInvertProfile>,
     ) -> Result<Self, String> {
-        // Native sparse LU is the fallback linear solve. Validate pivots here
-        // so `solve` can assume the factors are usable.
+        // Native sparse LU is the production linear solve for shift-invert.
+        // Validate pivots here because a missing pivot means the requested
+        // shift made (A - sigma I) numerically unusable for this grid.
         if matrix.rows != matrix.cols {
             return Err("LU factorization requires a square matrix".to_string());
         }
