@@ -46,6 +46,9 @@ Examples = "https://github.com/QuentinWach/micromode/tree/main/examples"
 Changelog = "https://github.com/QuentinWach/micromode/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+scipy = [
+  "scipy>=1.11,<2.0",
+]
 dev = [
   "maturin>=1.7,<2",
   "packaging>=24.2",

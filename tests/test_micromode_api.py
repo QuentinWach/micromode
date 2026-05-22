@@ -94,6 +94,57 @@ def test_materials_api_matches_component_api_for_diagonal_grid():
     assert from_materials.field_components["Ex"].shape == (5, 4, 1, 1, 2)
 
 
+def test_scipy_reference_backend_matches_rust_for_diagonal_grid():
+    pytest.importorskip("scipy")
+    eps, x_edges, y_edges = _strip_grid(5, 4)
+    freq = mm.C_0 / 1.55
+    common = {
+        "eps_xx": eps,
+        "x_edges": x_edges,
+        "y_edges": y_edges,
+        "freqs": [freq],
+        "num_modes": 2,
+        "target_neff": 2.5,
+        "krylov_dim": 18,
+    }
+
+    rust = mm.solve_grid(**common)
+    reference = mm.solve_grid(**common, backend="scipy-reference")
+
+    np.testing.assert_allclose(reference.n_complex.values, rust.n_complex.values, rtol=1e-8, atol=1e-8)
+    run_info = _solver_info(reference)["runs"][0]
+    assert _solver_info(reference)["backend"] == "scipy_arpack_reference"
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
+    assert run_info["operator_size"] == _solver_info(rust)["runs"][0]["operator_size"]
+    assert run_info["operator_nnz"] == _solver_info(rust)["runs"][0]["operator_nnz"]
+    np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
+    assert run_info["lorentz_orthogonality_error"] < 1e-8
+
+
+def test_scipy_reference_backend_rejects_unsupported_solver_features():
+    eps, x_edges, y_edges = _strip_grid(4, 3)
+
+    with pytest.raises(ValueError, match="does not support PML"):
+        mm.solve_grid(
+            eps_xx=eps,
+            x_edges=x_edges,
+            y_edges=y_edges,
+            freqs=[mm.C_0 / 1.55],
+            pml=(1, 0),
+            backend="scipy-reference",
+        )
+
+    with pytest.raises(ValueError, match="only diagonal material grids"):
+        mm.solve_grid(
+            eps_xx=eps,
+            eps_xz=np.full_like(eps, 0.01),
+            x_edges=x_edges,
+            y_edges=y_edges,
+            freqs=[mm.C_0 / 1.55],
+            backend="scipy-reference",
+        )
+
+
 def test_materials_api_accepts_full_tensor_grid():
     x_edges = _linspace_edges(-1.0, 1.0, 5)
     y_edges = _linspace_edges(-0.8, 0.8, 4)
