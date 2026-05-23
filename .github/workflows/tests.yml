@@ -19,9 +19,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Rust tooling
-        run: rustup component add rustfmt clippy
-
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -32,12 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
-
-      - name: Check Rust formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run Rust clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Check Python formatting
         run: uv run ruff format --check .
@@ -73,17 +64,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Build extension
-        run: uv run maturin develop
-
       - name: Check release metadata
         run: uv run python scripts/check_release_metadata.py
 
       - name: Run Python tests
         run: uv run pytest -m "not slow" --cov=micromode --cov-report=xml --cov-report=term-missing
-
-      - name: Run Rust tests
-        run: cargo test --no-default-features
 
       - name: Build distributions
         if: matrix.python-version == '3.13'
@@ -165,14 +150,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Build extension
-        run: uv run maturin develop
-
       - name: Run Python tests
         run: uv run pytest
-
-      - name: Run Rust tests
-        run: cargo test --no-default-features
 
   test-windows:
     name: Windows portable tests
@@ -193,14 +172,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Build extension
-        run: uv run maturin develop
-
       - name: Run Python tests
         run: uv run pytest -m "not slow"
-
-      - name: Run Rust tests
-        run: cargo test --no-default-features
 
       - name: Build distributions
         run: uv build

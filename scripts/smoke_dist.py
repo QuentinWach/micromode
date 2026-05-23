@@ -37,14 +37,16 @@ def main() -> None:
 
 
 def latest_wheel(required_tag: str) -> Path:
-    wheels = sorted(
-        (ROOT / "dist").glob(f"micromode-*-{required_tag}-*.whl"),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
-    )
+    wheels = sorted((ROOT / "dist").glob(f"micromode-*-{required_tag}-*.whl"), key=_mtime, reverse=True)
     if not wheels:
-        raise SystemExit(f"no {required_tag} wheel found in dist/")
+        wheels = sorted((ROOT / "dist").glob("micromode-*-py3-none-any.whl"), key=_mtime, reverse=True)
+    if not wheels:
+        raise SystemExit(f"no {required_tag} or py3-none-any wheel found in dist/")
     return wheels[0].resolve()
+
+
+def _mtime(path: Path) -> float:
+    return path.stat().st_mtime
 
 
 def python_tag(python: str) -> str:

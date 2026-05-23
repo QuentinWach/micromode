@@ -1,9 +1,9 @@
 # micromode
 
-An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, with a readable **SciPy/ARPACK** backend and an optional native **[Rust](https://rust-lang.org/)** backend.
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**.
 
 ```bash
-pip install "micromode[scipy]"
+pip install micromode
 ```
 
 [![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
@@ -16,10 +16,8 @@ pip install "micromode[scipy]"
 ## Why Use It?
 
 - **Grid-first API**: pass arrays directly, with no required geometry model.
-- **Auditable SciPy default**: sparse operators are assembled in Python and
-  solved with SciPy/ARPACK when SciPy is installed.
-- **Optional Rust backend**: a portable native fallback for environments that do
-  not want a SciPy dependency.
+- **Auditable SciPy solver**: sparse operators are assembled in Python and
+  solved with SciPy/ARPACK.
 - **Practical** outputs: fields, `n_eff`, `k_eff`, mode area, polarization fractions,
   Lorentz overlaps, plotting, dataframe export, and HDF5 save/load.
 - **Tensor-aware**: supports scalar, diagonal anisotropic, and full tensor material
@@ -100,32 +98,8 @@ the public solver controls are summarized in [docs/mode-solver-methods.md](docs/
 
 ## Solver
 
-MicroMode defaults to a Python/SciPy backend when SciPy is installed. This path
-assembles the finite-difference sparse operators in Python and solves the
-shift-invert eigenproblems with
+MicroMode assembles the finite-difference sparse operators in Python and solves
+the shift-invert eigenproblems with
 [SciPy/ARPACK](https://docs.scipy.org/doc/scipy/reference/sparse.linalg.html).
 That makes the numerical method easier for academic users to inspect and
 debug, while still using a trusted sparse eigensolver stack.
-
-The recommended install includes SciPy:
-
-```bash
-pip install "micromode[scipy]"
-```
-
-The public APIs use `backend="auto"` by default. In auto mode MicroMode selects
-SciPy when available and falls back to Rust otherwise. You can also choose a
-backend explicitly:
-
-```python
-data = mm.solve_modes(..., backend="scipy")  # same as backend="scipy-reference"
-data = mm.solve_modes(..., backend="rust")
-```
-
-The Rust backend remains useful when a deployment needs a self-contained native
-solver with no SciPy, ARPACK, BLAS/LAPACK, or Fortran toolchain requirement. It
-uses sparse finite-difference operators, AMD fill-reducing ordering, sparse LU
-factorization, and a shift-invert Arnoldi iteration. The SciPy and Rust paths
-are compared in tests so their effective indices and normalization diagnostics
-stay aligned on supported cases. See
-[docs/backend-trust.md](docs/backend-trust.md).

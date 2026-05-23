@@ -1,15 +1,15 @@
 """Readable SciPy implementation for the mode solver.
 
-This module assembles the sparse mode-solver paths in plain Python/SciPy. It is
-the preferred backend when SciPy is installed because it keeps the numerical
-contract inspectable by users who want to audit the finite-difference operators
-against SciPy/ARPACK.
+This module assembles the sparse mode-solver paths in plain Python/SciPy. It
+keeps the numerical contract inspectable by users who want to audit the
+finite-difference operators against SciPy/ARPACK.
 """
 
 from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
+from typing import Any, cast
 
 import numpy as np
 
@@ -59,8 +59,8 @@ def solve_diagonal_scipy_reference(
 ) -> SparseSolveResult:
     """Solve the diagonal sparse eigenproblem with SciPy/ARPACK.
 
-    This is the same reduced ``[Ex, Ey]`` transverse eigenproblem used by the
-    Rust backend for diagonal material tensors.
+    This is the reduced ``[Ex, Ey]`` transverse eigenproblem for diagonal
+    material tensors.
     """
 
     sparse, spla, scipy_linalg = _import_scipy()
@@ -87,7 +87,7 @@ def solve_diagonal_scipy_reference(
         scale=float(derivative_scale),
     )
     operators = _assemble_diagonal_operators(sparse, eps_tensor, mu_tensor, derivatives)
-    operator = operators["mat"]
+    operator = cast(Any, operators["mat"])
     eig_guess = complex(-(neff_guess * neff_guess), 0.0)
     operator, arpack_initial_vector, arpack_guess = _real_arpack_problem_if_close(
         operator, initial_vector, eig_guess
@@ -300,7 +300,7 @@ def _import_scipy():
         import scipy.sparse as sparse
         import scipy.sparse.linalg as spla
     except ImportError as exc:  # pragma: no cover - depends on optional extra.
-        raise ImportError("the SciPy backend requires `pip install micromode[scipy]`") from exc
+        raise ImportError("the SciPy solver requires `pip install micromode` with SciPy installed") from exc
     return sparse, spla, scipy_linalg
 
 

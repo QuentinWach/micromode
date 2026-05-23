@@ -528,7 +528,7 @@ def _assign_tensor_offdiagonal(
 
 @dataclass(frozen=True)
 class Spec:
-    """Mode solver options for backend-backed grid solves."""
+    """Mode solver options for grid solves."""
 
     num_modes: int = 1
     target_neff: float | None = None

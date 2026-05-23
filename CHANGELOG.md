@@ -19,9 +19,7 @@
 Initial alpha release candidate.
 
 - Added grid-first Python API for rasterized mode solving.
-- Added Rust sparse shift-invert solver backend.
-- Added a portable native Rust sparse eigensolver path with AMD ordering, packed
-  LU solves, adaptive Arnoldi stopping, and no external solver-stack dependency.
+- Added sparse shift-invert solver support.
 - Added 2D cross-section solves and 1D slice solves.
 - Added scalar, diagonal anisotropic, and tensor material grids.
 - Added six-component field reconstruction.

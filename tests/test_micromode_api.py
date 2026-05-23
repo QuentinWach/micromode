@@ -34,7 +34,7 @@ def _strip_grid(nx: int = 5, ny: int = 4) -> tuple[np.ndarray, tuple[float, ...]
     return eps, x_edges, y_edges
 
 
-def test_grid_api_solves_with_default_backend():
+def test_grid_api_solves_with_scipy_solver():
     eps, x_edges, y_edges = _strip_grid(6, 5)
     freq = mm.C_0 / 1.55
 
@@ -53,7 +53,8 @@ def test_grid_api_solves_with_default_backend():
     assert data.field_components["Ex"].shape == (6, 5, 1, 1, 2)
     assert set(data.field_components) == {"Ex", "Ey", "Ez", "Hx", "Hy", "Hz"}
     run_info = _solver_info(data)["runs"][0]
-    assert run_info["backend_kind"] in {"diagonal_scipy_reference", "diagonal_sparse"}
+    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
     assert run_info["phase_convention"] == "dominant_e_real_positive"
     assert run_info["normalization"] == "lorentz_orthogonal_unit_transverse_power"
     np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
@@ -69,8 +70,7 @@ def test_grid_api_solves_with_default_backend():
     assert abs(anchor.imag) <= 1e-10 * max(abs(anchor), 1.0)
 
 
-def test_default_backend_prefers_scipy_when_available():
-    pytest.importorskip("scipy")
+def test_scipy_solver_reports_operator_diagnostics():
     eps, x_edges, y_edges = _strip_grid(5, 4)
 
     data = mm.solve_grid(
@@ -83,45 +83,10 @@ def test_default_backend_prefers_scipy_when_available():
         krylov_dim=16,
     )
 
-    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
-    assert _solver_info(data)["runs"][0]["backend_kind"] == "diagonal_scipy_reference"
-
-
-def test_rust_backend_can_be_selected_explicitly():
-    eps, x_edges, y_edges = _strip_grid(5, 4)
-
-    data = mm.solve_grid(
-        eps_xx=eps,
-        x_edges=x_edges,
-        y_edges=y_edges,
-        wavelength=1.55,
-        num_modes=1,
-        target_neff=2.5,
-        krylov_dim=16,
-        backend="rust",
-    )
-
-    assert _solver_info(data)["backend"] == "native_shift_invert"
-    assert _solver_info(data)["runs"][0]["backend_kind"] == "diagonal_sparse"
-
-
-def test_scipy_backend_alias_selects_scipy_reference_path():
-    pytest.importorskip("scipy")
-    eps, x_edges, y_edges = _strip_grid(5, 4)
-
-    data = mm.solve_grid(
-        eps_xx=eps,
-        x_edges=x_edges,
-        y_edges=y_edges,
-        wavelength=1.55,
-        num_modes=1,
-        target_neff=2.5,
-        krylov_dim=16,
-        backend="scipy",
-    )
-
-    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
-    assert _solver_info(data)["runs"][0]["backend_kind"] == "diagonal_scipy_reference"
+    run_info = _solver_info(data)["runs"][0]
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
+    assert run_info["operator_size"] == 2 * eps.size
+    assert run_info["operator_nnz"] > run_info["operator_size"]
 
 
 def test_materials_api_matches_component_api_for_diagonal_grid():
@@ -150,35 +115,30 @@ def test_materials_api_matches_component_api_for_diagonal_grid():
     assert from_materials.field_components["Ex"].shape == (5, 4, 1, 1, 2)
 
 
-def test_scipy_reference_backend_matches_rust_for_diagonal_grid():
-    pytest.importorskip("scipy")
+def test_scipy_solver_handles_diagonal_grid():
     eps, x_edges, y_edges = _strip_grid(5, 4)
     freq = mm.C_0 / 1.55
-    common = {
-        "eps_xx": eps,
-        "x_edges": x_edges,
-        "y_edges": y_edges,
-        "freqs": [freq],
-        "num_modes": 2,
-        "target_neff": 2.5,
-        "krylov_dim": 18,
-    }
 
-    rust = mm.solve_grid(**common, backend="rust")
-    reference = mm.solve_grid(**common, backend="scipy-reference")
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        freqs=[freq],
+        num_modes=2,
+        target_neff=2.5,
+        krylov_dim=18,
+    )
 
-    np.testing.assert_allclose(reference.n_complex.values, rust.n_complex.values, rtol=1e-8, atol=1e-8)
-    run_info = _solver_info(reference)["runs"][0]
-    assert _solver_info(reference)["backend"] == "scipy_arpack_reference"
+    run_info = _solver_info(data)["runs"][0]
+    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
     assert run_info["backend_kind"] == "diagonal_scipy_reference"
-    assert run_info["operator_size"] == _solver_info(rust)["runs"][0]["operator_size"]
-    assert run_info["operator_nnz"] == _solver_info(rust)["runs"][0]["operator_nnz"]
+    assert run_info["operator_size"] == 2 * eps.size
+    assert run_info["operator_nnz"] > run_info["operator_size"]
     np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
     assert run_info["lorentz_orthogonality_error"] < 1e-8
 
 
-def test_scipy_reference_backend_matches_rust_for_pml_and_tensorial_paths():
-    pytest.importorskip("scipy")
+def test_scipy_solver_handles_pml_and_tensorial_paths():
     eps, x_edges, y_edges = _strip_grid(4, 3)
 
     pml_common = {
@@ -191,14 +151,12 @@ def test_scipy_reference_backend_matches_rust_for_pml_and_tensorial_paths():
         "pml": (1, 0),
         "krylov_dim": 18,
     }
-    rust_pml = mm.solve_grid(**pml_common, backend="rust")
-    reference_pml = mm.solve_grid(**pml_common, backend="scipy-reference")
+    pml_data = mm.solve_grid(**pml_common)
 
-    np.testing.assert_allclose(reference_pml.n_complex.values, rust_pml.n_complex.values, rtol=1e-8, atol=1e-8)
-    pml_run = _solver_info(reference_pml)["runs"][0]
+    pml_run = _solver_info(pml_data)["runs"][0]
     assert pml_run["backend_kind"] == "diagonal_scipy_reference"
-    assert pml_run["operator_size"] == _solver_info(rust_pml)["runs"][0]["operator_size"]
-    assert pml_run["operator_nnz"] == _solver_info(rust_pml)["runs"][0]["operator_nnz"]
+    assert pml_run["operator_size"] == 2 * eps.size
+    assert pml_run["operator_nnz"] > pml_run["operator_size"]
 
     tensor_common = {
         "eps_xx": eps,
@@ -213,36 +171,30 @@ def test_scipy_reference_backend_matches_rust_for_pml_and_tensorial_paths():
         "target_neff": 2.2,
         "krylov_dim": 20,
     }
-    rust_tensor = mm.solve_grid(**tensor_common, backend="rust")
-    reference_tensor = mm.solve_grid(**tensor_common, backend="scipy-reference")
+    tensor_data = mm.solve_grid(**tensor_common)
 
-    np.testing.assert_allclose(reference_tensor.n_complex.values, rust_tensor.n_complex.values, rtol=1e-8, atol=1e-8)
-    tensor_run = _solver_info(reference_tensor)["runs"][0]
+    tensor_run = _solver_info(tensor_data)["runs"][0]
     assert tensor_run["backend_kind"] == "tensorial_scipy_reference"
-    assert tensor_run["operator_size"] == _solver_info(rust_tensor)["runs"][0]["operator_size"]
-    assert tensor_run["operator_nnz"] == _solver_info(rust_tensor)["runs"][0]["operator_nnz"]
+    assert tensor_run["operator_size"] == 4 * eps.size
+    assert tensor_run["operator_nnz"] > tensor_run["operator_size"]
 
 
-def test_scipy_reference_backend_matches_rust_for_transformed_grid():
-    pytest.importorskip("scipy")
+def test_scipy_solver_handles_transformed_grid():
     eps, x_edges, y_edges = _strip_grid(4, 3)
-    common = {
-        "eps_xx": eps,
-        "x_edges": x_edges,
-        "y_edges": y_edges,
-        "freqs": [mm.C_0 / 1.55],
-        "num_modes": 1,
-        "target_neff": 2.5,
-        "angle_theta": 0.08,
-        "angle_phi": 0.25,
-        "krylov_dim": 20,
-    }
 
-    rust = mm.solve_grid(**common, backend="rust")
-    reference = mm.solve_grid(**common, backend="scipy-reference")
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        angle_theta=0.08,
+        angle_phi=0.25,
+        krylov_dim=20,
+    )
 
-    np.testing.assert_allclose(reference.n_complex.values, rust.n_complex.values, rtol=1e-8, atol=1e-8)
-    assert _solver_info(reference)["runs"][0]["backend_kind"] == "tensorial_scipy_reference"
+    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_scipy_reference"
 
 
 def test_materials_api_accepts_full_tensor_grid():
@@ -503,7 +455,7 @@ def test_materials_subpixel_averaging_helpers():
     assert materials.shape == (2, 2)
 
 
-def test_angle_and_bend_use_tensorial_rust_path():
+def test_angle_and_bend_use_tensorial_path():
     eps, x_edges, y_edges = _strip_grid()
 
     data = mm.solve_grid(
@@ -551,7 +503,7 @@ def test_full_tensor_grid_supports_angle_and_bend_transform():
         krylov_dim=18,
     )
 
-    assert _solver_info(data)["runs"][0]["backend_kind"] in {"tensorial_scipy_reference", "tensorial_sparse"}
+    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_scipy_reference"
     assert np.isfinite(data.n_complex.values).all()
     assert np.isfinite(data.field_components["Ex"].values).all()
 

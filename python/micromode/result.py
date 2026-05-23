@@ -12,7 +12,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from ._rust import C_0
+from .constants import C_0
 
 _SPATIAL_DIMS = ("x", "y", "z")
 _E_COMPONENTS = ("Ex", "Ey", "Ez")
@@ -236,7 +236,7 @@ class Result:
 
         ``kind="power"`` computes the transverse power-product
         ``integral((E_a x H_b*) . n) dA``. ``kind="lorentz"`` computes the
-        unconjugated reciprocal product used by the Rust orthogonalization
+        unconjugated reciprocal product used by the solver orthogonalization
         pass. ``kind="electric"`` computes a simpler electric-field inner
         product for mode tracking. All overlap kinds use the mode-plane cell
         widths as integration weights and require matching result grids.
@@ -533,7 +533,7 @@ def _overlap_value(
     # Power and Lorentz overlaps require the complete six-component mode. Power
     # uses H* and measures physical flux. Lorentz deliberately does not
     # conjugate either mode; it is the reciprocal product used to orthogonalize
-    # the mode set in Rust.
+    # the mode set.
     missing = [
         component for component in (*_E_COMPONENTS, *_H_COMPONENTS) if component not in left or component not in right
     ]

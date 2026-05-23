@@ -37,8 +37,8 @@ finite-difference frequency-domain method on a regular Yee grid [2].
 
 ## Discretization
 
-The Rust kernels use relative material tensors $\epsilon_r(x,y)$,
-$\mu_r(x,y)$ and scale transverse derivatives by $1/k_0$, so the sparse
+The solver uses relative material tensors $\epsilon_r(x,y)$,
+$\mu_r(x,y)$ and scales transverse derivatives by $1/k_0$, so the sparse
 operators are dimensionless. On the local Yee grid, the four derivative
 matrices are
 

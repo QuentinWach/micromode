@@ -133,7 +133,7 @@ def grid_demos() -> list[GridDemo]:
         GridDemo(
             key="anisotropic_tensor_grid",
             title="Full Tensor Anisotropic Grid",
-            description="Diagonal anisotropy plus off-diagonal epsilon terms solved by Rust sparse.",
+            description="Diagonal anisotropy plus off-diagonal epsilon terms solved by the sparse tensorial path.",
             make_material_grid=make_anisotropic_tensor_grid,
             target_neff=2.0,
             num_modes=1,
@@ -142,7 +142,7 @@ def grid_demos() -> list[GridDemo]:
         GridDemo(
             key="angled_bent_grid",
             title="Angled And Bent Grid Solve",
-            description="A diagonal grid transformed through the Rust tensorial angle/bend path.",
+            description="A diagonal grid transformed through the tensorial angle/bend path.",
             make_material_grid=make_strip_grid,
             target_neff=2.5,
             num_modes=1,

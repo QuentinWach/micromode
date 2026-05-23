@@ -94,18 +94,6 @@ def test_local_fixture_comparison_uses_staggered_rasterization_for_z_strips():
 
 
 @pytest.mark.slow
-def test_scipy_fixture_comparison_uses_staggered_rasterization_for_z_strips():
-    pytest.importorskip("scipy")
-    manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
-    entries = {entry["case_id"]: entry for entry in manifest["cases"]}
-
-    for case_id in ("strip_z_scalar_single", "group_index_silicon_strip"):
-        status = _compare_local_case(EXTENDED_FIXTURE_ROOT, entries[case_id], backend="scipy_reference")
-        assert status["status"] == "pass"
-        assert status["n_complex_max_abs_error"] <= status["n_complex_atol"]
-
-
-@pytest.mark.slow
 def test_local_production_fixture_matrix_passes():
     from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
 
@@ -120,27 +108,6 @@ def test_local_production_fixture_matrix_passes():
     assert production_ids
     for case_id in production_ids:
         status = _compare_local_case(EXTENDED_FIXTURE_ROOT, entries[case_id])
-        assert status["support"] == "production"
-        assert status["status"] == "pass", f"{case_id}: {status['summary']}"
-        assert status["n_complex_max_abs_error"] <= status["n_complex_atol"]
-
-
-@pytest.mark.slow
-def test_scipy_production_fixture_matrix_passes():
-    pytest.importorskip("scipy")
-    from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
-
-    manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
-    entries = {entry["case_id"]: entry for entry in manifest["cases"]}
-    production_ids = [
-        case_id
-        for case_id, recipe in _LOCAL_CASES.items()
-        if recipe.get("support", "production") == "production" and case_id in entries
-    ]
-
-    assert production_ids
-    for case_id in production_ids:
-        status = _compare_local_case(EXTENDED_FIXTURE_ROOT, entries[case_id], backend="scipy_reference")
         assert status["support"] == "production"
         assert status["status"] == "pass", f"{case_id}: {status['summary']}"
         assert status["n_complex_max_abs_error"] <= status["n_complex_atol"]

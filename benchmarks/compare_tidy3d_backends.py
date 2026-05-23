@@ -64,7 +64,7 @@ def main() -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compare MicroMode Rust, MicroMode SciPy, and Tidy3D local solves.")
+    parser = argparse.ArgumentParser(description="Compare MicroMode SciPy and Tidy3D local solves.")
     parser.add_argument("--preset", choices=tuple(PRESETS), default="quick")
     parser.add_argument(
         "--profile-source",
@@ -72,7 +72,7 @@ def parse_args() -> argparse.Namespace:
         default="tidy3d",
         help="Use Tidy3D's exact local solver grid/epsilon profile, or MicroMode's independent analytic raster.",
     )
-    parser.add_argument("--output", type=Path, default=Path("tmp/tidy3d_backend_benchmark.json"))
+    parser.add_argument("--output", type=Path, default=Path("tmp/tidy3d_solver_benchmark.json"))
     return parser.parse_args()
 
 
@@ -90,32 +90,27 @@ def run_case(case: BenchmarkCase, *, profile_source: str) -> dict[str, object]:
         "cells": case.ny * case.nz,
         "profile_source": profile_source,
     }
-    rust_seconds, rust_neff = time_micromode(case, materials, backend="rust")
-    scipy_seconds, scipy_neff = time_micromode(case, materials, backend="scipy-reference")
+    scipy_seconds, scipy_neff = time_micromode(case, materials)
     tidy3d_seconds, tidy3d_neff = time_tidy3d(tidy3d_solver)
 
     row.update(
         {
-            "rust_seconds": rust_seconds,
             "scipy_seconds": scipy_seconds,
             "tidy3d_seconds": tidy3d_seconds,
-            "rust_n_eff": rust_neff.tolist(),
             "scipy_n_eff": scipy_neff.tolist(),
             "tidy3d_n_eff": tidy3d_neff.tolist(),
-            "rust_scipy_max_abs_neff": max_abs_delta(rust_neff, scipy_neff),
-            "rust_tidy3d_max_abs_neff": max_abs_delta(rust_neff, tidy3d_neff),
             "scipy_tidy3d_max_abs_neff": max_abs_delta(scipy_neff, tidy3d_neff),
         }
     )
     print(
-        f"{case.case_id}: rust={rust_seconds:.3f}s scipy={scipy_seconds:.3f}s "
-        f"tidy3d={tidy3d_seconds:.3f}s delta_tidy3d={row['rust_tidy3d_max_abs_neff']:.3e}",
+        f"{case.case_id}: scipy={scipy_seconds:.3f}s tidy3d={tidy3d_seconds:.3f}s "
+        f"delta_tidy3d={row['scipy_tidy3d_max_abs_neff']:.3e}",
         flush=True,
     )
     return row
 
 
-def time_micromode(case: BenchmarkCase, materials: mm.Materials, *, backend: str) -> tuple[float, np.ndarray]:
+def time_micromode(case: BenchmarkCase, materials: mm.Materials) -> tuple[float, np.ndarray]:
     start = time.perf_counter()
     data = mm.solve_modes(
         material_grid=materials,
@@ -124,7 +119,6 @@ def time_micromode(case: BenchmarkCase, materials: mm.Materials, *, backend: str
         target_neff=case.target_neff,
         krylov_dim=case.krylov_dim,
         pml=mm.PmlSpec(num_cells=case.num_pml),
-        backend=backend,
     )
     return time.perf_counter() - start, np.asarray(data.n_eff.values[0], dtype=float)
 
@@ -140,7 +134,7 @@ def make_tidy3d_solver(case: BenchmarkCase):
         import tidy3d as td
         from tidy3d.plugins.mode import ModeSolver
     except ImportError as exc:  # pragma: no cover - benchmark dependency only.
-        raise SystemExit("Install Tidy3D for this benchmark: uv run --with tidy3d --extra scipy ...") from exc
+        raise SystemExit("Install Tidy3D for this benchmark: uv run --with tidy3d ...") from exc
 
     structures = tidy3d_structures(td, case.problem)
     dl = min(WIDTH_Y / case.ny, WIDTH_Z / case.nz)
@@ -241,17 +235,14 @@ def max_abs_delta(left: np.ndarray, right: np.ndarray) -> float:
 
 def markdown_table(rows: list[dict[str, object]]) -> str:
     header = (
-        "| Problem | Grid | Rust (s) | SciPy backend (s) | Tidy3D local (s) | "
-        "max abs Δn_eff Rust/SciPy | max abs Δn_eff Rust/Tidy3D | "
-        "max abs Δn_eff SciPy/Tidy3D |\n"
-        "|---|---:|---:|---:|---:|---:|---:|---:|"
+        "| Problem | Grid | MicroMode SciPy (s) | Tidy3D local (s) | max abs Δn_eff SciPy/Tidy3D |\n"
+        "|---|---:|---:|---:|---:|"
     )
     lines = [header]
     for row in rows:
         lines.append(
-            f"| {row['description']} | {row['grid']} | {row['rust_seconds']:.3f} | "
-            f"{row['scipy_seconds']:.3f} | {row['tidy3d_seconds']:.3f} | "
-            f"{row['rust_scipy_max_abs_neff']:.3e} | {row['rust_tidy3d_max_abs_neff']:.3e} | "
+            f"| {row['description']} | {row['grid']} | {row['scipy_seconds']:.3f} | "
+            f"{row['tidy3d_seconds']:.3f} | "
             f"{row['scipy_tidy3d_max_abs_neff']:.3e} |"
         )
     return "\n".join(lines)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ._rust import C_0, EPSILON_0
+from .constants import C_0, EPSILON_0
 from .models import BoundarySpec, Grid, Materials, PmlSpec, Spec
 from .raster import solve_grid, solve_modes, solve_slice
 from .result import Result, overlap

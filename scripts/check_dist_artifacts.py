@@ -28,6 +28,11 @@ def main() -> None:
         metavar="PREFIX",
         help="Require at least one wheel platform tag with each prefix, for example macosx or manylinux",
     )
+    parser.add_argument(
+        "--allow-pure-python",
+        action="store_true",
+        help="Allow a py3-none-any wheel instead of platform-specific wheels.",
+    )
     args = parser.parse_args()
 
     dist = Path(args.dist)
@@ -45,6 +50,10 @@ def main() -> None:
         platform = match["platform"]
         python_tag = match["python"]
         platform_tags.update(platform.split("."))
+        if args.allow_pure_python and python_tag == "py3" and match["abi"] == "none" and platform == "any":
+            python_tags.update(args.require_cpython)
+            platform_tags.update(args.require_platform)
+            continue
         if python_tag.startswith("cp") and python_tag[2:].isdigit():
             version_digits = python_tag[2:]
             python_tags.add(f"3.{version_digits[1:]}")

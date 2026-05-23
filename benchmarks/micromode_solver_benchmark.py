@@ -34,8 +34,8 @@ def main() -> None:
                 "cells": nx * ny,
                 "repeat": repeat,
                 "seconds": elapsed,
-                "backend": run_info["backend"],
-                "backend_kind": run_info["backend_kind"],
+                "solver": run_info["backend"],
+                "solver_kind": run_info["backend_kind"],
                 "operator_size": run_info["operator_size"],
                 "operator_nnz": run_info["operator_nnz"],
                 "max_residual": float(np.max(run_info["residuals"])),
@@ -44,7 +44,7 @@ def main() -> None:
             rows.append(row)
             print(
                 f"{nx:4d}x{ny:<4d} repeat={repeat} "
-                f"{elapsed:7.3f}s backend={row['backend']} "
+                f"{elapsed:7.3f}s solver={row['solver']} "
                 f"max_res={row['max_residual']:.2e}"
             )
 
@@ -68,7 +68,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--krylov-dim", type=int, default=40)
     parser.add_argument("--wavelength", type=float, default=1.55)
     parser.add_argument("--num-pml", type=int, nargs=2, metavar=("NX", "NY"), default=(0, 0))
-    parser.add_argument("--output", type=Path, default=Path("tmp/micromode_backend_benchmark.json"))
+    parser.add_argument("--output", type=Path, default=Path("tmp/micromode_solver_benchmark.json"))
     return parser.parse_args()
 
 
