@@ -8,6 +8,7 @@ finite-difference operators against SciPy/ARPACK.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -88,12 +89,15 @@ def solve_diagonal_scipy_reference(
     operators = _assemble_diagonal_operators(sparse, eps_tensor, mu_tensor, derivatives)
     operator = operators["mat"]
     eig_guess = complex(-(neff_guess * neff_guess), 0.0)
+    operator, arpack_initial_vector, arpack_guess = _real_arpack_problem_if_close(
+        operator, initial_vector, eig_guess
+    )
     values, vectors = _selected_eigenpairs(
         operator,
         num_modes=num_modes,
-        sigma=eig_guess,
+        sigma=arpack_guess,
         krylov_dim=krylov_dim,
-        initial_vector=initial_vector,
+        initial_vector=arpack_initial_vector,
         spla=spla,
         scipy_linalg=scipy_linalg,
     )
@@ -533,6 +537,18 @@ def _canonical_sparse(matrix):
     return matrix
 
 
+def _real_arpack_problem_if_close(matrix, initial_vector: np.ndarray | None, guess: complex):
+    if matrix.nnz == 0:
+        return matrix, initial_vector, guess
+    matrix_imag = matrix.data.imag
+    matrix_scale = max(float(np.max(np.abs(matrix.data))), 1.0)
+    guess_is_real = abs(guess.imag) <= 1e-14 * max(abs(guess), 1.0)
+    if np.max(np.abs(matrix_imag)) <= 1e-14 * matrix_scale and guess_is_real:
+        real_vector = None if initial_vector is None else np.asarray(initial_vector.real, dtype=float)
+        return matrix.real.astype(float), real_vector, float(guess.real)
+    return matrix, initial_vector, guess
+
+
 def _selected_eigenpairs(
     mat,
     *,
@@ -552,15 +568,17 @@ def _selected_eigenpairs(
     ncv = min(size, max(int(krylov_dim), num_modes + 2))
     if ncv <= num_modes + 1:
         ncv = min(size, num_modes + 2)
-    values, vectors = spla.eigs(
-        mat,
-        k=num_modes,
-        sigma=sigma,
-        which="LM",
-        v0=None if initial_vector is None else np.asarray(initial_vector, dtype=np.complex128),
-        ncv=ncv,
-        tol=1e-10,
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=np.exceptions.ComplexWarning, module="scipy")
+        values, vectors = spla.eigs(
+            mat,
+            k=num_modes,
+            sigma=sigma,
+            which="LM",
+            v0=None if initial_vector is None else np.asarray(initial_vector),
+            ncv=ncv,
+            tol=1e-10,
+        )
     return np.asarray(values, dtype=np.complex128), np.asarray(vectors, dtype=np.complex128)
 
 

@@ -88,6 +88,7 @@ def run_case(case: BenchmarkCase) -> dict[str, object]:
             "tidy3d_n_eff": tidy3d_neff.tolist(),
             "rust_scipy_max_abs_neff": max_abs_delta(rust_neff, scipy_neff),
             "rust_tidy3d_max_abs_neff": max_abs_delta(rust_neff, tidy3d_neff),
+            "scipy_tidy3d_max_abs_neff": max_abs_delta(scipy_neff, tidy3d_neff),
         }
     )
     print(
@@ -196,15 +197,17 @@ def max_abs_delta(left: np.ndarray, right: np.ndarray) -> float:
 def markdown_table(rows: list[dict[str, object]]) -> str:
     header = (
         "| Problem | Grid | Rust (s) | SciPy backend (s) | Tidy3D local (s) | "
-        "max abs Δn_eff Rust/SciPy | max abs Δn_eff Rust/Tidy3D |\n"
-        "|---|---:|---:|---:|---:|---:|---:|"
+        "max abs Δn_eff Rust/SciPy | max abs Δn_eff Rust/Tidy3D | "
+        "max abs Δn_eff SciPy/Tidy3D |\n"
+        "|---|---:|---:|---:|---:|---:|---:|---:|"
     )
     lines = [header]
     for row in rows:
         lines.append(
             f"| {row['description']} | {row['grid']} | {row['rust_seconds']:.3f} | "
             f"{row['scipy_seconds']:.3f} | {row['tidy3d_seconds']:.3f} | "
-            f"{row['rust_scipy_max_abs_neff']:.3e} | {row['rust_tidy3d_max_abs_neff']:.3e} |"
+            f"{row['rust_scipy_max_abs_neff']:.3e} | {row['rust_tidy3d_max_abs_neff']:.3e} | "
+            f"{row['scipy_tidy3d_max_abs_neff']:.3e} |"
         )
     return "\n".join(lines)
 
