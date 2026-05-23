@@ -135,4 +135,5 @@ def _reorder_result_modes(result: Result, order: tuple[int, ...]) -> Result:
         field_components=field_components,
         n_group=n_group,
         dispersion=dispersion,
+        solver_info=result.solver_info,
     )

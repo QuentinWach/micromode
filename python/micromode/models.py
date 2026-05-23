@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from operator import index
+from typing import Literal, SupportsIndex, cast
 
 import numpy as np
 
@@ -24,9 +25,13 @@ class PmlSpec:
     order: int = 3
 
     def __post_init__(self) -> None:
-        if len(self.num_cells) != 2 or any(int(value) < 0 for value in self.num_cells):
+        if len(self.num_cells) != 2:
             raise ValueError("num_cells must contain two non-negative integers")
-        object.__setattr__(self, "num_cells", (int(self.num_cells[0]), int(self.num_cells[1])))
+        num_cells = (
+            _coerce_integral("num_cells", self.num_cells[0], minimum=0),
+            _coerce_integral("num_cells", self.num_cells[1], minimum=0),
+        )
+        object.__setattr__(self, "num_cells", num_cells)
         for name in ("sigma_max", "kappa_min", "kappa_max"):
             value = float(getattr(self, name))
             if not np.isfinite(value) or value <= 0.0:
@@ -34,9 +39,7 @@ class PmlSpec:
             object.__setattr__(self, name, value)
         if self.kappa_max < self.kappa_min:
             raise ValueError("kappa_max must be greater than or equal to kappa_min")
-        if int(self.order) <= 0:
-            raise ValueError("order must be positive")
-        object.__setattr__(self, "order", int(self.order))
+        object.__setattr__(self, "order", _coerce_integral("order", self.order, minimum=1))
 
     @classmethod
     def from_num_cells(cls, num_cells: tuple[int, int]) -> PmlSpec:
@@ -481,6 +484,20 @@ def _stack_diagonal_components(
     if yy_array.shape != shape or zz_array.shape != shape:
         raise ValueError(f"{label}_xx, {label}_yy, and {label}_zz must have shape {shape}")
     return np.stack([xx_array, yy_array, zz_array], axis=0)
+
+
+def _coerce_integral(name: str, value: object, *, minimum: int) -> int:
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError(f"{name} must contain integers")
+    try:
+        integer = index(cast(SupportsIndex, value))
+    except TypeError as exc:
+        raise ValueError(f"{name} must contain integers") from exc
+    if integer < minimum:
+        if minimum == 0:
+            raise ValueError(f"{name} must contain non-negative integers")
+        raise ValueError(f"{name} must be positive")
+    return int(integer)
 
 
 def _normalize_slice_axis(axis: SliceAxis) -> int:

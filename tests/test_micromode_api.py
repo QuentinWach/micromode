@@ -637,6 +637,7 @@ def test_sweep_tracks_modes_by_overlap():
         for mode_index, component in enumerate(order):
             fields[component][..., mode_index] = 1.0
         arrays = {component: xr.DataArray(values, dims=dims, coords=coords) for component, values in fields.items()}
+        solver_info = {"backend": "synthetic", "n_values": n_values}
         return mm.Result(
             n_complex=xr.DataArray(
                 [np.asarray(n_values, dtype=np.complex128)],
@@ -644,6 +645,7 @@ def test_sweep_tracks_modes_by_overlap():
                 coords={"f": coords["f"], "mode_index": coords["mode_index"]},
             ),
             field_components=arrays,
+            solver_info=solver_info,
         )
 
     first = result([2.2, 1.9], ("Ex", "Ey"))
@@ -653,6 +655,7 @@ def test_sweep_tracks_modes_by_overlap():
     sweep = mm.Sweep(values=np.asarray([0.4, 0.5]), results=tracked, parameter_name="width")
 
     np.testing.assert_allclose(tracked[1].n_complex.values, [[2.18, 1.91]])
+    assert tracked[1].solver_info == {"backend": "synthetic", "n_values": [1.91, 2.18]}
     np.testing.assert_allclose(sweep.n_eff[:, 0], [2.2, 2.18])
     assert {"width", "mode_index", "n_eff", "te_fraction"} <= set(sweep.to_dataframe().columns)
 
@@ -682,3 +685,7 @@ def test_spec_validation_for_core_options():
         mm.Spec(num_modes=0)
     with pytest.raises(ValueError, match="bend_axis"):
         mm.Spec(bend_radius=5.0)
+    with pytest.raises(ValueError, match="num_cells"):
+        mm.PmlSpec(num_cells=(1.5, 0))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="order"):
+        mm.PmlSpec(order=2.5)  # type: ignore[arg-type]
