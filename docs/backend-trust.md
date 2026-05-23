@@ -5,9 +5,9 @@ MicroMode has two backend roles:
 - The Rust backend is the production solver. It is fast, portable, and does not
   require users to install ARPACK, SuiteSparse, BLAS/LAPACK bindings, or a
   Fortran toolchain.
-- The SciPy reference backend is an optional audit path. It mirrors the diagonal
-  sparse operator in Python and calls SciPy/ARPACK so the core numerical method
-  can be inspected by users who are more comfortable reading Python.
+- The SciPy reference backend is an optional audit path. It mirrors the sparse
+  operators in Python and calls SciPy/ARPACK so the core numerical method can be
+  inspected by users who are more comfortable reading Python.
 
 The SciPy backend is selected explicitly:
 
@@ -33,25 +33,30 @@ pip install "micromode[scipy]"
 
 ## Supported Scope
 
-The first reference backend intentionally covers only the smallest useful
-surface:
+The reference backend covers the same core solve families as Rust:
 
 - diagonal scalar or diagonal-anisotropic material grids,
-- no angle or bend transform,
-- no PML,
-- the same reduced transverse eigenproblem used by the Rust diagonal backend.
+- full tensor material grids,
+- angle and bend transforms that route through the tensorial operator,
+- PML stretching,
+- one-dimensional slices, because they are padded into ordinary mode-plane
+  grids before backend dispatch.
 
-Full tensor grids, transformed grids, and PML remain Rust-only for now. That
-keeps the reference implementation short enough to audit.
+The remaining difference is operational rather than mathematical: the SciPy
+backend depends on SciPy/ARPACK and is expected to be slower and less portable
+than the Rust backend.
 
 ## What Is Compared
 
-The test suite runs the same diagonal grid through both backends and checks:
+The test suite runs representative grids through both backends and checks:
 
 - returned complex effective indices,
 - sparse operator size and nonzero count,
 - unit-power normalization diagnostics,
 - Lorentz orthogonality diagnostics.
+
+The covered cases include diagonal grids, PML, full-tensor/off-diagonal grids,
+and transformed grids.
 
 Run the focused cross-backend check with:
 
@@ -67,7 +72,7 @@ production tests still run.
 The relevant files are:
 
 - `python/micromode/scipy_reference.py`: readable Python/SciPy implementation of
-  the diagonal sparse path.
+  the diagonal and tensorial sparse paths.
 - `python/micromode/raster.py`: public backend selection and `Result` wrapping.
 - `src/operators.rs`: Rust Maxwell operator assembly.
 - `src/eigensolve.rs`: Rust shift-invert Arnoldi and sparse LU path.
@@ -76,4 +81,14 @@ The relevant files are:
 
 The intended trust chain is: inspect the Python reference, inspect the Rust
 operator comments, then run the cross-backend test to verify that Rust and SciPy
-agree on the supported diagonal cases.
+agree on the supported cases.
+
+## External References
+
+MicroMode also keeps Tidy3D-oriented examples and fixtures because Tidy3D is a
+recognizable reference point for photonics users. Tidy3D's
+[public source docs](https://docs.flexcompute.com/projects/tidy3d/en/latest/_modules/tidy3d/components/mode/mode_solver.html)
+show that its local mode solver import can fail when SciPy is unavailable, so
+Tidy3D-style comparisons are useful as behavioral validation in addition to the
+internal Rust-vs-SciPy checks. See the Tidy3D example in `examples/` and the
+committed mode-solver fixture harness for existing comparison infrastructure.

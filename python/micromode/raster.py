@@ -11,7 +11,7 @@ import xarray as xr
 from ._rust import C_0, solve_diagonal_sparse, solve_tensorial_sparse
 from .models import BoundaryCondition, BoundarySpec, Materials, PmlSpec, SliceAxis, Spec
 from .result import Result
-from .scipy_reference import solve_diagonal_scipy_reference
+from .scipy_reference import solve_diagonal_scipy_reference, solve_tensorial_scipy_reference
 
 _COMPONENTS = ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")
 Backend = Literal["rust", "scipy-reference"]
@@ -352,25 +352,6 @@ def _solve_one_frequency(
     target_neff = _shift_target_neff(float(target_neff))
     has_transform = abs(angle_theta) > 0.0 or bend_radius is not None
     is_diagonal = material_grid.is_diagonal
-    if backend == "scipy-reference":
-        if has_transform:
-            raise ValueError("backend='scipy-reference' currently supports only untransformed diagonal grids")
-        if not is_diagonal:
-            raise ValueError("backend='scipy-reference' currently supports only diagonal material grids")
-        if pml_spec.num_cells != (0, 0):
-            raise ValueError("backend='scipy-reference' currently does not support PML")
-        return _solve_one_frequency_scipy_reference(
-            eps_tensor=eps_tensor,
-            mu_tensor=mu_tensor,
-            dlf=dlf,
-            dlb=dlb,
-            freq=freq,
-            num_modes=num_modes,
-            target_neff=target_neff,
-            direction=direction,
-            krylov_dim=krylov_dim,
-            boundary_spec=boundary_spec,
-        )
     if has_transform:
         # Angle and bend coordinates are applied by transforming eps/mu. A
         # diagonal grid may become full tensor after this step.
@@ -386,6 +367,20 @@ def _solve_one_frequency(
         )
         if not (_is_diagonal_tensor(eps_tensor) and _is_diagonal_tensor(mu_tensor)):
             # Off-diagonal components require the tensorial first-order operator.
+            if backend == "scipy-reference":
+                return _solve_one_frequency_scipy_tensorial_reference(
+                    eps_tensor=eps_tensor,
+                    mu_tensor=mu_tensor,
+                    dlf=dlf,
+                    dlb=dlb,
+                    freq=freq,
+                    num_modes=num_modes,
+                    target_neff=target_neff,
+                    pml_spec=pml_spec,
+                    direction=direction,
+                    krylov_dim=krylov_dim,
+                    boundary_spec=boundary_spec,
+                )
             return _solve_one_frequency_rust_tensorial_sparse(
                 eps_tensor=eps_tensor,
                 mu_tensor=mu_tensor,
@@ -401,6 +396,20 @@ def _solve_one_frequency(
             )
         # If the transformed tensors remain diagonal, keep the faster diagonal
         # sparse formulation.
+        if backend == "scipy-reference":
+            return _solve_one_frequency_scipy_reference(
+                eps_tensor=eps_tensor,
+                mu_tensor=mu_tensor,
+                dlf=dlf,
+                dlb=dlb,
+                freq=freq,
+                num_modes=num_modes,
+                target_neff=target_neff,
+                pml_spec=pml_spec,
+                direction=direction,
+                krylov_dim=krylov_dim,
+                boundary_spec=boundary_spec,
+            )
         return _solve_one_frequency_rust_sparse(
             eps_tensor=eps_tensor,
             mu_tensor=mu_tensor,
@@ -416,6 +425,20 @@ def _solve_one_frequency(
         )
     if not is_diagonal:
         # User supplied a full tensor grid with no coordinate transform.
+        if backend == "scipy-reference":
+            return _solve_one_frequency_scipy_tensorial_reference(
+                eps_tensor=eps_tensor,
+                mu_tensor=mu_tensor,
+                dlf=dlf,
+                dlb=dlb,
+                freq=freq,
+                num_modes=num_modes,
+                target_neff=target_neff,
+                pml_spec=pml_spec,
+                direction=direction,
+                krylov_dim=krylov_dim,
+                boundary_spec=boundary_spec,
+            )
         return _solve_one_frequency_rust_tensorial_sparse(
             eps_tensor=eps_tensor,
             mu_tensor=mu_tensor,
@@ -430,6 +453,20 @@ def _solve_one_frequency(
             boundary_spec=boundary_spec,
         )
     # Ordinary scalar/diagonal grids use the production diagonal sparse backend.
+    if backend == "scipy-reference":
+        return _solve_one_frequency_scipy_reference(
+            eps_tensor=eps_tensor,
+            mu_tensor=mu_tensor,
+            dlf=dlf,
+            dlb=dlb,
+            freq=freq,
+            num_modes=num_modes,
+            target_neff=target_neff,
+            pml_spec=pml_spec,
+            direction=direction,
+            krylov_dim=krylov_dim,
+            boundary_spec=boundary_spec,
+        )
     return _solve_one_frequency_rust_sparse(
         eps_tensor=eps_tensor,
         mu_tensor=mu_tensor,
@@ -500,6 +537,7 @@ def _solve_one_frequency_scipy_reference(
     freq: float,
     num_modes: int,
     target_neff: float,
+    pml_spec: PmlSpec,
     direction: str,
     krylov_dim: int | None,
     boundary_spec: BoundarySpec,
@@ -516,6 +554,10 @@ def _solve_one_frequency_scipy_reference(
         neff_guess=target_neff,
         direction=direction,
         derivative_scale=C_0 / (2 * np.pi * freq),
+        omega=2 * np.pi * freq,
+        num_pml=pml_spec.num_cells,
+        pml_profile=pml_spec.profile_dict(),
+        dmin_pml=boundary_spec.dmin_pml,
         dmin_pmc=boundary_spec.dmin_pmc,
         krylov_dim=actual_krylov_dim,
         initial_vector=_default_initial_vector(2 * nx * ny, shape=(nx, ny)),
@@ -526,6 +568,52 @@ def _solve_one_frequency_scipy_reference(
         _solver_info_with_context(
             solver_info,
             backend_kind="diagonal_scipy_reference",
+            shape=(nx, ny),
+            krylov_dim=actual_krylov_dim,
+        ),
+    )
+
+
+def _solve_one_frequency_scipy_tensorial_reference(
+    *,
+    eps_tensor: np.ndarray,
+    mu_tensor: np.ndarray,
+    dlf: tuple[np.ndarray, np.ndarray],
+    dlb: tuple[np.ndarray, np.ndarray],
+    freq: float,
+    num_modes: int,
+    target_neff: float,
+    pml_spec: PmlSpec,
+    direction: str,
+    krylov_dim: int | None,
+    boundary_spec: BoundarySpec,
+) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    nx = len(dlf[0])
+    ny = len(dlf[1])
+    actual_krylov_dim = 32 if krylov_dim is None else int(krylov_dim)
+    n_complex, fields, solver_info = solve_tensorial_scipy_reference(
+        eps_tensor=eps_tensor,
+        mu_tensor=mu_tensor,
+        dlf=dlf,
+        dlb=dlb,
+        num_modes=num_modes,
+        neff_guess=target_neff,
+        direction=direction,
+        derivative_scale=C_0 / (2 * np.pi * freq),
+        omega=2 * np.pi * freq,
+        num_pml=pml_spec.num_cells,
+        pml_profile=pml_spec.profile_dict(),
+        dmin_pml=boundary_spec.dmin_pml,
+        dmin_pmc=boundary_spec.dmin_pmc,
+        krylov_dim=actual_krylov_dim,
+        initial_vector=_default_initial_vector(4 * nx * ny, shape=(nx, ny)),
+    )
+    return (
+        n_complex,
+        _fields_to_grid(fields, (nx, ny)),
+        _solver_info_with_context(
+            solver_info,
+            backend_kind="tensorial_scipy_reference",
             shape=(nx, ny),
             krylov_dim=actual_krylov_dim,
         ),

@@ -17,7 +17,7 @@ pip install micromode
 
 - **Grid-first API**: pass arrays directly, with no required geometry model.
 - **Fast**, portable Rust sparse backend: one production solve path.
-- **Auditable** optional SciPy reference backend for diagonal-grid checks.
+- **Auditable** optional SciPy reference backend for cross-checking solves.
 - **Practical** outputs: fields, `n_eff`, `k_eff`, mode area, polarization fractions,
   Lorentz overlaps, plotting, dataframe export, and HDF5 save/load.
 - **Tensor-aware**: supports scalar, diagonal anisotropic, and full tensor material
@@ -127,7 +127,7 @@ stopping once requested modes are stable, and selective Ritz vector
 reconstruction so work is spent on the modes that will actually be returned.
 
 For users who want an executable Python reference, MicroMode also provides an
-optional SciPy/ARPACK backend for the untransformed diagonal sparse path:
+optional SciPy/ARPACK backend:
 
 ```bash
 pip install "micromode[scipy]"
@@ -137,8 +137,8 @@ pip install "micromode[scipy]"
 data = mm.solve_modes(..., backend="scipy-reference")
 ```
 
-This backend is intentionally slower and narrower than Rust. Its purpose is to
-make the core diagonal eigenproblem easy to inspect in Python and to validate
-that the production Rust backend returns the same effective indices and
-normalization diagnostics on supported cases. See
+This backend is intentionally slower than Rust. Its purpose is to make the core
+eigenproblems easy to inspect in Python and to validate that the production Rust
+backend returns the same effective indices and normalization diagnostics on
+supported cases. See
 [docs/backend-trust.md](docs/backend-trust.md).

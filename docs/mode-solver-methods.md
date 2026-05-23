@@ -47,10 +47,10 @@ where \(\theta\) is a Ritz value of the inverse-shifted operator. The diagonal
 backend uses \(\sigma=-\texttt{target_neff}^2\); the tensorial backend uses
 \(\sigma=\texttt{target_neff}\).
 
-The optional `backend="scipy-reference"` path solves the same diagonal sparse
-operator with SciPy/ARPACK. It is limited to untransformed diagonal grids without
-PML and exists as a readable validation backend, not as the default production
-solver. Install it with `micromode[scipy]`.
+The optional `backend="scipy-reference"` path assembles the same diagonal or
+tensorial sparse operator in Python and solves it with SciPy/ARPACK. It exists
+as a readable validation backend, not as the default production solver. Install
+it with `micromode[scipy]`.
 
 Returned modes are sorted by decreasing real effective index, normalized to
 unit transverse power,
