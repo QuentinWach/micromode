@@ -1,3 +1,5 @@
+"""CLI and helpers for comparing committed mode-solver fixtures against MicroMode."""
+
 from __future__ import annotations
 
 import argparse
@@ -28,6 +30,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised when imported as a p
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse fixture-comparison CLI options."""
     parser = argparse.ArgumentParser(description="Inspect committed mode-solver reference fixtures.")
     parser.add_argument(
         "--suite",
@@ -72,6 +75,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Inspect fixtures and optionally run local comparisons."""
     args = parse_args()
     fixture_root = args.fixture_root or (DEFAULT_FIXTURE_ROOT / args.suite)
     manifest = read_json(manifest_path(fixture_root))
@@ -125,6 +129,7 @@ def main() -> None:
 
 
 def _compare_local_case(root: Path, entry: dict) -> dict:
+    """Run one reconstructable fixture recipe through MicroMode and compare outputs."""
     case_id = entry["case_id"]
     try:
         import micromode as sm
@@ -321,6 +326,7 @@ _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 def _solver_edges_from_field_coords(
     edges: tuple[np.ndarray, np.ndarray], recipe: dict
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Derive solver edge coordinates from fixture field coordinates."""
     dmin_pmc = tuple(bool(value) for value in recipe.get("dmin_pmc", (False, False)))
     trim_edges = tuple(recipe.get("trim_edges", ((0, 0), (0, 0))))
     out = []
@@ -354,6 +360,7 @@ def _solve_recipe(
     normal_dim: str,
     normal_coord: float,
 ):
+    """Solve all frequencies described by a local fixture recipe."""
     freqs = tuple(float(freq) for freq in ref_n.coords["f"].values)
     if recipe.get("solve_each_frequency"):
         rows = []
@@ -424,6 +431,7 @@ def _solve_recipe_for_freq(
     normal_dim: str,
     normal_coord: float,
 ):
+    """Solve one fixture recipe for one frequency or frequency tuple."""
     freqs = (float(freq),) if np.isscalar(freq) else tuple(float(value) for value in freq)
     centers = tuple((axis_edges[:-1] + axis_edges[1:]) / 2 for axis_edges in edges)
     eps_xx, eps_yy, eps_zz = _eps_components_from_recipe(recipe, edges, centers, tangent_dims, freqs[0], sm)
@@ -460,6 +468,7 @@ def _eps_components_from_recipe(
     freq: float,
     sm,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Rasterize diagonal epsilon components at Yee sample locations."""
     if recipe.get("yee_staggered", True):
         return (
             _eps_from_recipe(recipe, (coords[0], edges[1][:-1]), tangent_dims, freq, sm),
@@ -477,6 +486,7 @@ def _eps_from_recipe(
     freq: float,
     sm,
 ) -> np.ndarray:
+    """Rasterize primitive boxes and circles onto one component grid."""
     grids = np.meshgrid(*coords, indexing="ij")
     eps = np.full(tuple(len(coord) for coord in coords), recipe.get("clad_eps", 1.0), dtype=np.complex128)
     for box in recipe.get("boxes", ()):
@@ -502,6 +512,7 @@ def _eps_from_recipe(
 
 
 def _reorder_modes(values: np.ndarray, recipe: dict) -> np.ndarray:
+    """Apply fixture-specific mode ordering before comparison."""
     if recipe.get("sort_order") != "ascending":
         return values
     order = np.argsort(values.real, axis=1)
@@ -509,6 +520,7 @@ def _reorder_modes(values: np.ndarray, recipe: dict) -> np.ndarray:
 
 
 def _reorder_field_modes(values: np.ndarray, recipe: dict) -> np.ndarray:
+    """Apply fixture-specific field ordering for diagnostic overlap checks."""
     if recipe.get("sort_order") != "ascending":
         return values
     # Field reordering is only used for a coarse overlap diagnostic; n sorting is authoritative.
@@ -516,10 +528,12 @@ def _reorder_field_modes(values: np.ndarray, recipe: dict) -> np.ndarray:
 
 
 def _status(status: str, summary: str, **details) -> dict:
+    """Build a normalized status dictionary for report output."""
     return {"status": status, "failed": status == "fail", "summary": summary, **details}
 
 
 def _n_tolerance(entry: dict, recipe: dict | None = None) -> float:
+    """Resolve the effective-index tolerance for one fixture case."""
     if recipe is not None:
         recipe_tolerance = recipe.get("n_tolerance")
         if recipe_tolerance is not None:

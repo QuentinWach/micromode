@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
+    """Validate release metadata and workflow expectations."""
     pyproject = load_toml("pyproject.toml")
     project = pyproject["project"]
     publish_workflow = (ROOT / ".github/workflows/publish.yml").read_text(encoding="utf-8")
@@ -48,11 +49,13 @@ def main() -> None:
 
 
 def load_toml(path: str) -> dict:
+    """Load a TOML file relative to the repository root."""
     with (ROOT / path).open("rb") as handle:
         return tomllib.load(handle)
 
 
 def require_tag_matches_version(version: str) -> None:
+    """Ensure a tag-triggered workflow uses the package version."""
     if os.environ.get("GITHUB_REF_TYPE") != "tag":
         return
 
@@ -61,6 +64,7 @@ def require_tag_matches_version(version: str) -> None:
 
 
 def require(condition: bool, message: str) -> None:
+    """Raise SystemExit with a message when a condition is false."""
     if not condition:
         raise SystemExit(message)
 

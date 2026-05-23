@@ -1,3 +1,5 @@
+"""Tests for committed mode-solver fixture integrity and local comparisons."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,14 +23,17 @@ EXTENDED_FIXTURE_ROOT = ROOT / "fixtures" / "mode_solver" / "extended"
 
 
 def test_smoke_fixture_manifest_and_hashes_are_current():
+    """Verify smoke fixture manifest and hashes are current."""
     _assert_fixture_manifest(SMOKE_FIXTURE_ROOT)
 
 
 def test_extended_fixture_manifest_and_hashes_are_current():
+    """Verify extended fixture manifest and hashes are current."""
     _assert_fixture_manifest(EXTENDED_FIXTURE_ROOT)
 
 
 def test_reference_fixture_files_do_not_embed_external_package_name():
+    """Verify reference fixture files do not embed external package name."""
     needle = bytes.fromhex("746964793364")
     for root in (SMOKE_FIXTURE_ROOT, EXTENDED_FIXTURE_ROOT):
         for path in root.rglob("*"):
@@ -37,6 +42,7 @@ def test_reference_fixture_files_do_not_embed_external_package_name():
 
 
 def test_reference_hdf5_files_do_not_store_serialized_solver_metadata():
+    """Verify reference hdf5 files do not store serialized solver metadata."""
     import h5py
 
     for root in (SMOKE_FIXTURE_ROOT, EXTENDED_FIXTURE_ROOT):
@@ -46,6 +52,7 @@ def test_reference_hdf5_files_do_not_store_serialized_solver_metadata():
 
 
 def test_reference_n_complex_matches_summary_payload():
+    """Verify reference n complex matches summary payload."""
     for root in (SMOKE_FIXTURE_ROOT, EXTENDED_FIXTURE_ROOT):
         for entry in read_json(manifest_path(root))["cases"]:
             case_id = entry["case_id"]
@@ -60,6 +67,7 @@ def test_reference_n_complex_matches_summary_payload():
 
 
 def test_reference_field_signatures_match_summary_payload():
+    """Verify reference field signatures match summary payload."""
     for root in (SMOKE_FIXTURE_ROOT, EXTENDED_FIXTURE_ROOT):
         for entry in read_json(manifest_path(root))["cases"]:
             case_id = entry["case_id"]
@@ -73,6 +81,7 @@ def test_reference_field_signatures_match_summary_payload():
 
 
 def test_phase_aligned_relative_error_accepts_global_complex_phase():
+    """Verify phase aligned relative error accepts global complex phase."""
     golden = np.array([1 + 2j, -3 + 1j, 0.5 - 0.25j])
     actual = golden * np.exp(1j * 0.73)
 
@@ -84,6 +93,7 @@ def test_phase_aligned_relative_error_accepts_global_complex_phase():
 
 @pytest.mark.slow
 def test_local_fixture_comparison_uses_staggered_rasterization_for_z_strips():
+    """Verify local fixture comparison uses staggered rasterization for z strips."""
     manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
     entries = {entry["case_id"]: entry for entry in manifest["cases"]}
 
@@ -95,6 +105,7 @@ def test_local_fixture_comparison_uses_staggered_rasterization_for_z_strips():
 
 @pytest.mark.slow
 def test_local_production_fixture_matrix_passes():
+    """Verify local production fixture matrix passes."""
     from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
 
     manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
@@ -115,6 +126,7 @@ def test_local_production_fixture_matrix_passes():
 
 @pytest.mark.slow
 def test_unsupported_fixture_matrix_is_explicit():
+    """Verify unsupported fixture matrix is explicit."""
     from benchmarks.compare_mode_solver_fixtures import _LOCAL_CASES
 
     manifest = read_json(manifest_path(EXTENDED_FIXTURE_ROOT))
@@ -137,6 +149,7 @@ def test_unsupported_fixture_matrix_is_explicit():
 
 
 def _assert_fixture_manifest(root: Path) -> None:
+    """Return assert fixture manifest used by tests."""
     manifest = read_json(manifest_path(root))
     expected_ids = [case["case_id"] for case in manifest["registered_cases"]]
     actual_ids = [case["case_id"] for case in manifest["cases"]]
@@ -156,6 +169,7 @@ def _assert_fixture_manifest(root: Path) -> None:
 
 
 def _array_from_summary_values(payload: dict) -> np.ndarray:
+    """Return array from summary values used by tests."""
     if "real" in payload:
         return np.asarray(payload["real"]) + 1j * np.asarray(payload["imag"])
     return np.asarray(payload["values"])

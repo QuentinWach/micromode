@@ -1,3 +1,5 @@
+"""Benchmark MicroMode against equivalent Tidy3D mode-solver setups."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +15,8 @@ import micromode as mm
 
 @dataclass(frozen=True)
 class BenchmarkCase:
+    """Configuration for one backend comparison problem."""
+
     case_id: str
     description: str
     ny: int
@@ -53,6 +57,7 @@ N_AIR = 1.0
 
 
 def main() -> None:
+    """Run selected backend-comparison cases and print a markdown table."""
     args = parse_args()
     cases = list(PRESETS[args.preset])
     rows = [run_case(case, profile_source=args.profile_source) for case in cases]
@@ -64,6 +69,7 @@ def main() -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse backend benchmark CLI options."""
     parser = argparse.ArgumentParser(description="Compare MicroMode SciPy and Tidy3D local solves.")
     parser.add_argument("--preset", choices=tuple(PRESETS), default="quick")
     parser.add_argument(
@@ -77,6 +83,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_case(case: BenchmarkCase, *, profile_source: str) -> dict[str, object]:
+    """Execute one benchmark case for MicroMode and Tidy3D."""
     tidy3d_solver = make_tidy3d_solver(case)
     materials = (
         micromode_materials_from_tidy3d_solver(tidy3d_solver, case)
@@ -111,6 +118,7 @@ def run_case(case: BenchmarkCase, *, profile_source: str) -> dict[str, object]:
 
 
 def time_micromode(case: BenchmarkCase, materials: mm.Materials) -> tuple[float, np.ndarray]:
+    """Time the MicroMode solve for a prepared material grid."""
     start = time.perf_counter()
     data = mm.solve_modes(
         material_grid=materials,
@@ -124,12 +132,14 @@ def time_micromode(case: BenchmarkCase, materials: mm.Materials) -> tuple[float,
 
 
 def time_tidy3d(solver) -> tuple[float, np.ndarray]:
+    """Time a Tidy3D mode solve."""
     start = time.perf_counter()
     data = solver.solve()
     return time.perf_counter() - start, np.asarray(data.n_eff.values[0], dtype=float)
 
 
 def make_tidy3d_solver(case: BenchmarkCase):
+    """Construct a Tidy3D mode solver for one benchmark case."""
     try:
         import tidy3d as td
         from tidy3d.plugins.mode import ModeSolver
@@ -157,6 +167,7 @@ def make_tidy3d_solver(case: BenchmarkCase):
 
 
 def micromode_materials_from_tidy3d_solver(solver, case: BenchmarkCase) -> mm.Materials:
+    """Rasterize Tidy3D solver materials into a MicroMode grid."""
     eps = np.asarray(solver._solver_eps(tidy3d_frequency()), dtype=np.complex128)
     grid = solver._solver_grid
     return mm.Materials.from_components(
@@ -176,12 +187,14 @@ def micromode_materials_from_tidy3d_solver(solver, case: BenchmarkCase) -> mm.Ma
 
 
 def tidy3d_frequency() -> float:
+    """Return the benchmark frequency in Hz."""
     import tidy3d as td
 
     return float(td.C_0 / WAVELENGTH_UM)
 
 
 def micromode_materials(case: BenchmarkCase) -> mm.Materials:
+    """Build a direct MicroMode material grid for one benchmark case."""
     y_edges = np.linspace(-0.5 * WIDTH_Y, 0.5 * WIDTH_Y, case.ny + 1)
     z_edges = np.linspace(-0.5 * WIDTH_Z, 0.5 * WIDTH_Z, case.nz + 1)
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
@@ -200,6 +213,7 @@ def micromode_materials(case: BenchmarkCase) -> mm.Materials:
 
 
 def tidy3d_structures(td, problem: str):
+    """Return Tidy3D geometry structures for one benchmark problem."""
     structures = [
         td.Structure(
             geometry=td.Box(center=(0.0, 0.0, -0.5001), size=(td.inf, td.inf, 1.0002)),
@@ -227,6 +241,7 @@ def tidy3d_structures(td, problem: str):
 
 
 def max_abs_delta(left: np.ndarray, right: np.ndarray) -> float:
+    """Return the maximum absolute difference between sorted mode arrays."""
     count = min(left.size, right.size)
     if count == 0:
         return float("nan")
@@ -234,6 +249,7 @@ def max_abs_delta(left: np.ndarray, right: np.ndarray) -> float:
 
 
 def markdown_table(rows: list[dict[str, object]]) -> str:
+    """Format benchmark rows as a markdown table."""
     header = (
         "| Problem | Grid | MicroMode SciPy (s) | Tidy3D local (s) | max abs Δn_eff SciPy/Tidy3D |\n"
         "|---|---:|---:|---:|---:|"

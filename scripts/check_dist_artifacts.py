@@ -12,6 +12,7 @@ WHEEL_RE = re.compile(
 
 
 def main() -> None:
+    """Validate wheel and source-distribution artifact coverage."""
     parser = argparse.ArgumentParser()
     parser.add_argument("dist", nargs="?", default="dist", help="Directory containing release artifacts")
     parser.add_argument(
@@ -72,6 +73,7 @@ def main() -> None:
 
 
 def require(condition: object, message: str) -> None:
+    """Raise SystemExit with a message when a condition is false."""
     if not condition:
         raise SystemExit(message)
 

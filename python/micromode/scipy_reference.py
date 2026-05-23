@@ -24,6 +24,8 @@ SparseSolveResult = tuple[np.ndarray, list[np.ndarray], dict[str, object]]
 
 @dataclass
 class _ModeFields:
+    """Mutable six-component field container used during normalization."""
+
     ex: np.ndarray
     ey: np.ndarray
     ez: np.ndarray
@@ -32,9 +34,11 @@ class _ModeFields:
     hz: np.ndarray
 
     def components(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Return field components in electric-then-magnetic order."""
         return self.ex, self.ey, self.ez, self.hx, self.hy, self.hz
 
     def add_scaled(self, other: _ModeFields, scale: complex) -> None:
+        """Add another mode into this mode with a complex scale factor."""
         for left, right in zip(self.components(), other.components(), strict=True):
             left += scale * right
 
@@ -293,6 +297,7 @@ def solve_tensorial_scipy_reference(
 
 
 def _import_scipy():
+    """Import SciPy modules lazily so package import stays lightweight."""
     try:
         import scipy.linalg as scipy_linalg
         import scipy.sparse as sparse
@@ -317,6 +322,7 @@ def _create_derivative_matrices(
     dmin_pmc: tuple[bool, bool],
     scale: float,
 ):
+    """Assemble scaled Yee derivative matrices with optional PML stretching."""
     matrices = (
         _make_dxf(sparse, np.asarray(dlf[0], dtype=float), shape, dmin_pmc[0]),
         _make_dxb(sparse, np.asarray(dlb[0], dtype=float), shape, dmin_pmc[0]),
@@ -344,6 +350,7 @@ def _create_derivative_matrices(
 
 
 def _make_dxf(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
+    """Build the forward x derivative on the local Yee grid."""
     nx, ny = shape
     if nx == 1:
         return sparse.csc_matrix((ny, ny), dtype=np.complex128)
@@ -367,6 +374,7 @@ def _make_dxf(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
 
 
 def _make_dxb(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
+    """Build the backward x derivative on the local Yee grid."""
     nx, ny = shape
     if nx == 1:
         return sparse.csc_matrix((ny, ny), dtype=np.complex128)
@@ -390,6 +398,7 @@ def _make_dxb(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
 
 
 def _make_dyf(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
+    """Build the forward y derivative on the local Yee grid."""
     nx, ny = shape
     if ny == 1:
         return sparse.csc_matrix((nx, nx), dtype=np.complex128)
@@ -413,6 +422,7 @@ def _make_dyf(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
 
 
 def _make_dyb(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
+    """Build the backward y derivative on the local Yee grid."""
     nx, ny = shape
     if ny == 1:
         return sparse.csc_matrix((nx, nx), dtype=np.complex128)
@@ -436,12 +446,15 @@ def _make_dyb(sparse, dls: np.ndarray, shape: tuple[int, int], pmc: bool):
 
 
 def _assemble_diagonal_operators(sparse, eps: np.ndarray, mu: np.ndarray, der_mats) -> dict[str, object]:
+    """Assemble the reduced diagonal-material eigen-operator blocks."""
     n = eps.shape[-1]
     zero = sparse.csc_matrix((n, n), dtype=np.complex128)
     dxf, dxb, dyf, dyb = der_mats
     inv_eps_zz = sparse.diags(1.0 / eps[2, 2, :], format="csc")
     inv_mu_zz = sparse.diags(1.0 / mu[2, 2, :], format="csc")
 
+    # The block names mirror docs/physics-model.md:
+    # A_diag = P_mu Q + P_partial Q_epsilon, with Q = Q_epsilon + Q_partial.
     p_mu = sparse.bmat(
         [[zero, sparse.diags(mu[1, 1, :], format="csc")], [-sparse.diags(mu[0, 0, :], format="csc"), zero]],
         format="csc",
@@ -470,11 +483,13 @@ def _assemble_diagonal_operators(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
 
 
 def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_mats):
+    """Assemble the full tensorial first-order eigen-operator."""
     dxf, dxb, dyf, dyb = der_mats
     inv_eps_22 = sparse.diags(1.0 / eps[2, 2, :], format="csc")
     inv_mu_22 = sparse.diags(1.0 / mu[2, 2, :], format="csc")
 
     def diag(values):
+        """Return a sparse diagonal matrix for one flattened tensor component."""
         return sparse.diags(values, format="csc")
 
     eps_20_over_22 = eps[2, 0, :] / eps[2, 2, :]
@@ -486,6 +501,9 @@ def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
     mu_02_over_22 = mu[0, 2, :] / mu[2, 2, :]
     mu_12_over_22 = mu[1, 2, :] / mu[2, 2, :]
 
+    # Schur-complement terms eliminate Ez and Hz before solving the first-order
+    # transverse system [Ex, Ey, Hx, Hy]. Suffix "_s" means the component has
+    # been corrected by its coupling through the local z component.
     mu_10_s = mu[1, 0, :] - mu[1, 2, :] * mu_20_over_22
     mu_11_s = mu[1, 1, :] - mu[1, 2, :] * mu_21_over_22
     mu_00_s = mu[0, 0, :] - mu[0, 2, :] * mu_20_over_22
@@ -495,6 +513,9 @@ def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
     eps_00_s = eps[0, 0, :] - eps[0, 2, :] * eps_20_over_22
     eps_01_s = eps[0, 1, :] - eps[0, 2, :] * eps_21_over_22
 
+    # Block names encode output row and input column:
+    # a = electric transverse rows, b = magnetic transverse rows, x/y = local
+    # transverse components. For example, axby maps Hy into the Ex equation.
     axax = -(dxf @ diag(eps_20_over_22)) - diag(mu_12_over_22) @ dyf
     axay = -(dxf @ diag(eps_21_over_22)) + diag(mu_12_over_22) @ dxf
     axbx = -(dxf @ inv_eps_22 @ dyb) + diag(mu_10_s)
@@ -530,12 +551,14 @@ def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
 
 
 def _canonical_sparse(matrix):
+    """Return a cleaned CSC sparse matrix."""
     matrix = matrix.tocsc(copy=True)
     matrix.eliminate_zeros()
     return matrix
 
 
 def _real_arpack_problem_if_close(matrix, initial_vector: np.ndarray | None, guess: complex):
+    """Use a real ARPACK problem when the operator and shift are effectively real."""
     if matrix.nnz == 0:
         return matrix, initial_vector, guess
     matrix_imag = matrix.data.imag
@@ -557,6 +580,7 @@ def _selected_eigenpairs(
     spla,
     scipy_linalg,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Select eigenpairs nearest the requested shift."""
     size = mat.shape[0]
     if num_modes >= size - 1:
         values, vectors = scipy_linalg.eig(mat.toarray())
@@ -592,6 +616,7 @@ def _create_s_diagonal_values(
     omega: float,
     profile: dict[str, float | int] | None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Build inverse PML stretch vectors for every derivative stencil."""
     nx, ny = shape
     avg_speed = _average_relative_speed(shape, num_pml, eps_tensor, mu_tensor)
     sx_f = _create_sfactor(
@@ -627,12 +652,14 @@ def _average_relative_speed(
     eps_tensor: np.ndarray,
     mu_tensor: np.ndarray,
 ) -> np.ndarray:
+    """Estimate relative wave speed near PML boundaries."""
     eps_avg = _pml_average_all_sides(shape, num_pml, eps_tensor)
     mu_avg = _pml_average_all_sides(shape, num_pml, mu_tensor)
     return 1.0 / np.sqrt(eps_avg * mu_avg)
 
 
 def _pml_average_all_sides(shape: tuple[int, int], num_pml: tuple[int, int], tensor: np.ndarray) -> np.ndarray:
+    """Average diagonal material components on each boundary side."""
     nx, ny = shape
     regions: list[list[complex]] = [[], [], [], []]
     for comp in range(3):
@@ -664,6 +691,7 @@ def _create_sfactor(
     avg_speed: np.ndarray,
     profile: dict[str, float | int] | None,
 ) -> np.ndarray:
+    """Dispatch PML stretch-factor construction for a derivative direction."""
     if n_pml == 0:
         return np.ones(n, dtype=np.complex128)
     if direction == "f":
@@ -682,6 +710,7 @@ def _create_sfactor_f(
     avg_speed: np.ndarray,
     profile: dict[str, float | int] | None,
 ) -> np.ndarray:
+    """Build forward-grid PML stretch factors."""
     sfactor = np.ones(n, dtype=np.complex128)
     for i in range(n):
         if i < n_pml and dmin_pml:
@@ -700,6 +729,7 @@ def _create_sfactor_b(
     avg_speed: np.ndarray,
     profile: dict[str, float | int] | None,
 ) -> np.ndarray:
+    """Build backward-grid PML stretch factors."""
     sfactor = np.ones(n, dtype=np.complex128)
     for i in range(n):
         if i < n_pml and dmin_pml:
@@ -716,6 +746,7 @@ def _s_value(
     avg_speed: complex,
     profile: dict[str, float | int] | None,
 ) -> complex:
+    """Evaluate one polynomial PML stretch factor."""
     values = {
         "sigma_max": 2.0,
         "kappa_min": 1.0,
@@ -731,6 +762,7 @@ def _s_value(
 
 
 def _lorentz_orthogonalize_and_normalize(modes: list[_ModeFields], cell_areas: np.ndarray) -> dict[str, object]:
+    """Normalize modes and enforce Lorentz orthogonality."""
     for mode in modes:
         _normalize_to_unit_power(mode, cell_areas)
 
@@ -763,6 +795,7 @@ def _lorentz_orthogonalize_and_normalize(modes: list[_ModeFields], cell_areas: n
 
 
 def _normalize_to_unit_power(mode: _ModeFields, cell_areas: np.ndarray) -> float:
+    """Scale a mode to unit transverse power."""
     norm = abs(_transverse_power(mode, cell_areas))
     if norm <= np.finfo(float).eps:
         return 0.0
@@ -773,16 +806,19 @@ def _normalize_to_unit_power(mode: _ModeFields, cell_areas: np.ndarray) -> float
 
 
 def _transverse_power(mode: _ModeFields, cell_areas: np.ndarray) -> complex:
+    """Compute conjugated transverse power flux."""
     return complex(np.sum((mode.ex * np.conj(mode.hy) - mode.ey * np.conj(mode.hx)) * cell_areas))
 
 
 def _lorentz_overlap(left: _ModeFields, right: _ModeFields, cell_areas: np.ndarray) -> complex:
+    """Compute the unconjugated reciprocal-product overlap."""
     left_cross_right = np.sum((left.ex * right.hy - left.ey * right.hx) * cell_areas)
     right_cross_left = np.sum((right.ex * left.hy - right.ey * left.hx) * cell_areas)
     return complex(0.5 * (left_cross_right + right_cross_left))
 
 
 def _apply_dominant_e_phase_convention(mode: _ModeFields) -> None:
+    """Rotate a mode so its largest electric component is real-positive."""
     electric = np.concatenate((mode.ex, mode.ey, mode.ez))
     if electric.size == 0:
         return

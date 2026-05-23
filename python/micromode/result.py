@@ -344,11 +344,13 @@ class Result:
         )
 
     def _require_components(self, components: Iterable[str]) -> None:
+        """Raise if required field components are absent."""
         missing = [component for component in components if component not in self.field_components]
         if missing:
             raise ValueError(f"field component(s) required but missing: {', '.join(missing)}")
 
     def _normal_dim(self) -> str:
+        """Infer the singleton propagation-normal dimension."""
         reference = self._reference_field()
         attr_normal = reference.attrs.get("normal_dim")
         if attr_normal in _SPATIAL_DIMS and attr_normal in reference.dims:
@@ -362,19 +364,23 @@ class Result:
         raise ValueError("fields must contain at least one spatial dimension")
 
     def _tangential_dims(self) -> tuple[str, ...]:
+        """Return the spatial dimensions transverse to propagation."""
         normal = self._normal_dim()
         reference = self._reference_field()
         return tuple(dim for dim in _SPATIAL_DIMS if dim in reference.dims and dim != normal)
 
     def _reference_field(self) -> xr.DataArray:
+        """Return one field array used for dimension inference."""
         if not self.field_components:
             raise ValueError("at least one field component is required")
         return next(iter(self.field_components.values()))
 
     def _spatial_axes(self, data_array: xr.DataArray) -> tuple[int, ...]:
+        """Return axis indices corresponding to spatial dimensions."""
         return tuple(axis for axis, dim in enumerate(data_array.dims) if dim in _SPATIAL_DIMS)
 
     def _integrated_power(self, component: str) -> np.ndarray:
+        """Integrate squared field magnitude over the spatial grid."""
         # Used by mode metrics such as polarization fraction and mode area. The
         # integration weights come from the mode-plane cell widths stored on each
         # field DataArray.
@@ -385,6 +391,7 @@ class Result:
         )
 
     def _spatial_weights(self, data_array: xr.DataArray) -> np.ndarray:
+        """Build broadcastable cell-area weights from width coordinates."""
         # Prefer explicit width coordinates written by the solver. Fall back to
         # midpoint-derived widths so externally constructed Results still work.
         weights: np.ndarray | float = 1.0
@@ -403,6 +410,7 @@ class Result:
 
     @staticmethod
     def _cell_widths(values: np.ndarray) -> np.ndarray:
+        """Infer cell widths from coordinate midpoints."""
         if values.size <= 1:
             return np.ones(values.shape, dtype=float)
         midpoints = 0.5 * (values[1:] + values[:-1])
@@ -416,9 +424,11 @@ class Result:
         return np.abs(np.diff(edges))
 
     def _fraction_dataset(self, te: np.ndarray, tm: np.ndarray) -> xr.Dataset:
+        """Package TE/TM fractions as a dataset aligned to modes."""
         return xr.Dataset({"te": self._mode_data_array(te), "tm": self._mode_data_array(tm)})
 
     def _mode_data_array(self, values: np.ndarray) -> xr.DataArray:
+        """Wrap per-mode values with the n_complex coordinates."""
         return xr.DataArray(values, dims=self.n_complex.dims, coords=self.n_complex.coords)
 
     def _add_optional_metric(
@@ -427,22 +437,26 @@ class Result:
         name: str,
         getter: Any,
     ) -> None:
+        """Add a metric if its required field components are available."""
         try:
             metrics[name] = getter()
         except ValueError:
             return
 
     def _select_field(self, component: str, *, f: int | float, mode_index: int) -> xr.DataArray:
+        """Select one component at a frequency and mode index."""
         data_array = self.field_components[component]
         data_array = data_array.isel(f=f) if isinstance(f, int) else data_array.sel(f=f, method="nearest")
         return data_array.isel(mode_index=mode_index)
 
     def _selected_mode_fields(self, *, f: int | float, mode_index: int) -> dict[str, xr.DataArray]:
+        """Select all available fields for one mode."""
         return {
             component: self._select_field(component, f=f, mode_index=mode_index) for component in self.field_components
         }
 
     def _selected_frequency(self, f: int | float) -> float:
+        """Return the numeric frequency selected by index or nearest value."""
         freq = self.n_complex.coords["f"]
         if isinstance(f, int):
             return float(freq.values[f])
@@ -450,6 +464,7 @@ class Result:
 
     @staticmethod
     def _write_data_array(parent: Any, name: str, data_array: xr.DataArray) -> None:
+        """Write an xarray DataArray to the compact HDF5 layout."""
         group = parent.create_group(name)
         group.attrs["dims"] = json.dumps(list(data_array.dims))
         for attr_name, attr_value in data_array.attrs.items():
@@ -464,6 +479,7 @@ class Result:
 
     @staticmethod
     def _read_data_array(group: Any) -> xr.DataArray:
+        """Read an xarray DataArray from the compact HDF5 layout."""
         dims = tuple(json.loads(group.attrs["dims"]))
         attrs = {
             key.removeprefix("attr:"): value
@@ -489,6 +505,7 @@ def overlap(
 
 
 def _json_safe(value: Any) -> Any:
+    """Convert NumPy and complex values into JSON-safe objects."""
     if isinstance(value, np.ndarray):
         return _json_safe(value.tolist())
     if isinstance(value, (complex, np.complexfloating)):
@@ -504,6 +521,7 @@ def _json_safe(value: Any) -> Any:
 
 
 def _loads_hdf5_json_attr(value: Any) -> Any:
+    """Decode a JSON HDF5 attribute stored as bytes or text."""
     if isinstance(value, bytes):
         value = value.decode("utf-8")
     return json.loads(value)
@@ -517,6 +535,7 @@ def _overlap_value(
     *,
     kind: str,
 ) -> complex:
+    """Compute one unnormalized field overlap integral."""
     if kind not in _OVERLAP_KINDS:
         raise ValueError("kind must be 'electric', 'power', or 'lorentz'")
     if kind == "electric":
@@ -554,6 +573,7 @@ def _normal_power_integrand(
     right: dict[str, xr.DataArray],
     normal: str,
 ) -> np.ndarray:
+    """Return the normal Poynting-flux integrand."""
     if normal == "x":
         return left["Ey"].values * np.conj(right["Hz"].values) - left["Ez"].values * np.conj(right["Hy"].values)
     if normal == "y":
@@ -568,6 +588,7 @@ def _normal_lorentz_integrand(
     right: dict[str, xr.DataArray],
     normal: str,
 ) -> np.ndarray:
+    """Return the symmetrized unconjugated Lorentz integrand."""
     left_cross_right = _normal_unconjugated_cross_integrand(left, right, normal)
     right_cross_left = _normal_unconjugated_cross_integrand(right, left, normal)
     return 0.5 * (left_cross_right + right_cross_left)
@@ -578,6 +599,7 @@ def _normal_unconjugated_cross_integrand(
     right: dict[str, xr.DataArray],
     normal: str,
 ) -> np.ndarray:
+    """Return one unconjugated cross-product component."""
     if normal == "x":
         return left["Ey"].values * right["Hz"].values - left["Ez"].values * right["Hy"].values
     if normal == "y":
@@ -593,6 +615,7 @@ def _validate_overlap_grid(
     right_result: Result,
     right: dict[str, xr.DataArray],
 ) -> None:
+    """Ensure two modes live on compatible spatial grids."""
     if left_result._normal_dim() != right_result._normal_dim():
         raise ValueError("mode overlap requires matching mode-plane normal dimensions")
     reference_left = left["Ex"]

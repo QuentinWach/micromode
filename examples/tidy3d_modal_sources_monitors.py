@@ -32,6 +32,7 @@ N_AIR = 1.0
 
 
 def main() -> None:
+    """Run the example script from parsed command-line options."""
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -52,6 +53,7 @@ def main() -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the example script."""
     parser = argparse.ArgumentParser(description="Recreate the Tidy3D modal sources/monitors mode plot.")
     parser.add_argument(
         "--output-dir",
@@ -91,6 +93,7 @@ def tidy3d_waveguide_materials(*, y_step: float, z_step: float) -> tuple[mm.Mate
 
 
 def centered_edges(*, width: float, step: float) -> np.ndarray:
+    """Return evenly spaced cell edges centered on zero."""
     if step <= 0.0:
         raise ValueError("step must be positive")
     cells = round(width / step)
@@ -100,6 +103,7 @@ def centered_edges(*, width: float, step: float) -> np.ndarray:
 
 
 def plot_tidy3d_mode_fields(materials: mm.Materials, eps: np.ndarray, data: mm.Result, path: Path) -> None:
+    """Plot Tidy3D-style modal field panels."""
     y_edges = np.asarray(materials.grid.x_edges, dtype=float)
     z_edges = np.asarray(materials.grid.y_edges, dtype=float)
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
@@ -135,17 +139,20 @@ def plot_tidy3d_mode_fields(materials: mm.Materials, eps: np.ndarray, data: mm.R
 
 
 def field_abs(data: mm.Result, *, component: str, mode_index: int) -> np.ndarray:
+    """Return the magnitude image for one field component and mode."""
     field = data.field_components[component].isel(f=0, mode_index=mode_index).squeeze(drop=True)
     return np.abs(np.asarray(field.transpose("y", "z").values))
 
 
 def draw_material_context(ax, y: np.ndarray, z: np.ndarray, eps: np.ndarray) -> None:
+    """Draw material outlines for the Tidy3D-style example."""
     ax.axhline(0.0, color="#111111", linewidth=0.85, alpha=0.35)
     silicon_level = 0.5 * (N_AIR**2 + N_SI**2)
     ax.contour(y, z, eps.real.T, levels=[silicon_level], colors="#2f2f2f", linewidths=1.0, alpha=0.75)
 
 
 def publication_style() -> dict[str, object]:
+    """Return matplotlib rcParams for generated example figures."""
     return {
         "font.family": "DejaVu Sans",
         "font.size": 10,
@@ -161,6 +168,7 @@ def publication_style() -> dict[str, object]:
 
 
 def save_figure(fig, path: Path) -> None:
+    """Write a figure to disk and close it."""
     fig.savefig(path)
     fig.savefig(path.with_suffix(".pdf"))
     fig.savefig(path.with_suffix(".svg"))

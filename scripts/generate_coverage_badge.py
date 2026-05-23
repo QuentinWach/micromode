@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 def main() -> None:
+    """Generate an SVG coverage badge from coverage XML."""
     parser = argparse.ArgumentParser()
     parser.add_argument("coverage_xml", type=Path, nargs="?", default=Path("coverage.xml"))
     parser.add_argument("output_svg", type=Path, nargs="?", default=Path("docs/assets/coverage.svg"))
@@ -23,6 +24,7 @@ def main() -> None:
 
 
 def coverage_percent(path: Path) -> float:
+    """Extract line coverage percentage from coverage.py XML."""
     root = ET.parse(path).getroot()
     line_rate = root.attrib.get("line-rate")
     if line_rate is not None:
@@ -36,6 +38,7 @@ def coverage_percent(path: Path) -> float:
 
 
 def color_for_percent(percent: float) -> str:
+    """Choose a badge color for a coverage percentage."""
     if percent >= 90.0:
         return "#4c1"
     if percent >= 80.0:
@@ -48,6 +51,7 @@ def color_for_percent(percent: float) -> str:
 
 
 def render_badge(label: str, message: str, color: str) -> str:
+    """Render a compact shields-style SVG badge."""
     label = html.escape(label)
     message = html.escape(message)
     label_width = max(50, len(label) * 7 + 10)

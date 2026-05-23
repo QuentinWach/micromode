@@ -1,3 +1,5 @@
+"""Public package exports for the MicroMode Python API."""
+
 from __future__ import annotations
 
 from .constants import C_0, EPSILON_0

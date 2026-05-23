@@ -329,6 +329,7 @@ def _solve_one_frequency(
     bend_radius: float | None,
     bend_axis: int,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Select the sparse formulation and solve a single frequency."""
     # Forward and backward spacings represent the local Yee grid. The derivative
     # builders need both because E and H components are staggered.
     dlf = (np.diff(x_edges), np.diff(y_edges))
@@ -430,6 +431,7 @@ def _solve_one_frequency_scipy(
     krylov_dim: int | None,
     boundary_spec: BoundarySpec,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Run the diagonal SciPy solver and reshape its fields."""
     nx = len(dlf[0])
     ny = len(dlf[1])
     actual_krylov_dim = 32 if krylov_dim is None else int(krylov_dim)
@@ -476,6 +478,7 @@ def _solve_one_frequency_scipy_tensorial(
     krylov_dim: int | None,
     boundary_spec: BoundarySpec,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Run the tensorial SciPy solver and reshape its fields."""
     nx = len(dlf[0])
     ny = len(dlf[1])
     actual_krylov_dim = 32 if krylov_dim is None else int(krylov_dim)
@@ -519,6 +522,7 @@ def _transformed_material_tensors(
     bend_radius: float | None,
     bend_axis: int,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Apply angle and bend coordinate transforms to material tensors."""
     # Transformation-optics material update:
     #   eps' = J eps J.T / det(J)
     #   mu'  = J mu  J.T / det(J)
@@ -578,6 +582,7 @@ def _transformed_material_tensors(
 def _resolve_pml_spec(
     pml: PmlSpec | tuple[int, int] | None,
 ) -> PmlSpec:
+    """Normalize user PML input into a PmlSpec."""
     if pml is None:
         return PmlSpec()
     if isinstance(pml, PmlSpec):
@@ -588,6 +593,7 @@ def _resolve_pml_spec(
 def _resolve_boundary_spec(
     boundary: BoundarySpec | tuple[str, str] | None,
 ) -> BoundarySpec:
+    """Normalize user boundary input into a BoundarySpec."""
     if boundary is None:
         return BoundarySpec()
     if isinstance(boundary, BoundarySpec):
@@ -602,6 +608,7 @@ def _solver_info_with_context(
     shape: tuple[int, int],
     krylov_dim: int,
 ) -> dict[str, object]:
+    """Attach Python-side dispatch metadata to solver diagnostics."""
     # Add enough Python-side context for saved Result files and benchmark
     # reports to be self-describing.
     out = dict(solver_info)
@@ -614,12 +621,14 @@ def _solver_info_with_context(
 
 
 def _is_diagonal_tensor(tensor: np.ndarray, *, atol: float = 1e-12) -> bool:
+    """Return whether a flattened tensor has negligible off-diagonal terms."""
     off_diagonal = np.ones((3, 3), dtype=bool)
     np.fill_diagonal(off_diagonal, False)
     return bool(np.all(np.abs(tensor[off_diagonal]) <= atol))
 
 
 def _shift_target_neff(target_neff: float) -> float:
+    """Nudge the shift target away from exact eigenvalues for ARPACK stability."""
     target_shift = float(10 * np.finfo(np.float32).eps)
     if abs(target_shift) > abs(target_neff * target_shift):
         return target_neff + target_shift
@@ -627,6 +636,7 @@ def _shift_target_neff(target_neff: float) -> float:
 
 
 def _validate_edges(name: str, values: Sequence[float], cell_count: int) -> np.ndarray:
+    """Validate mode-plane edge coordinates against a cell count."""
     edges = np.asarray(values, dtype=float)
     if edges.shape != (cell_count + 1,):
         raise ValueError(f"{name} must have length {cell_count + 1}")
@@ -640,6 +650,7 @@ def _resolve_freqs(
     freqs: Sequence[float] | None,
     wavelength: float | Sequence[float] | None,
 ) -> tuple[float, ...]:
+    """Resolve exactly one frequency or wavelength input into frequencies."""
     if (freqs is None) == (wavelength is None):
         raise ValueError("provide exactly one of freqs or wavelength")
     if freqs is not None:
@@ -653,12 +664,14 @@ def _resolve_freqs(
 
 
 def _dual_steps(primal_steps: np.ndarray) -> np.ndarray:
+    """Return backward-grid step sizes from primal cell widths."""
     if len(primal_steps) == 1:
         return primal_steps.copy()
     return np.hstack((primal_steps[0], (primal_steps[:-1] + primal_steps[1:]) / 2))
 
 
 def _fields_to_grid(fields: list[np.ndarray], shape: tuple[int, int]) -> dict[str, np.ndarray]:
+    """Reshape flattened solver fields into x/y/mode arrays."""
     nx, ny = shape
     mode_count = fields[0].shape[0]
     out = {}
@@ -702,6 +715,7 @@ def _field_data_arrays(
     normal_axis: int,
     normal_coordinate: float,
 ) -> dict[str, xr.DataArray]:
+    """Wrap solved field arrays in coordinate-aware xarray objects."""
     axis_names = ("x", "y", "z")
     if normal_axis not in {0, 1, 2}:
         raise ValueError("normal_axis must be 0, 1, or 2")
@@ -740,6 +754,7 @@ def _field_data_arrays(
 
 
 def _default_initial_vector(size: int, shape: tuple[int, int] | None = None) -> np.ndarray:
+    """Build a deterministic ARPACK seed vector for reproducible solves."""
     if shape is not None and size % (shape[0] * shape[1]) == 0:
         nx, ny = shape
         multiplier = size // (nx * ny)

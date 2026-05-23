@@ -25,6 +25,7 @@ class PmlSpec:
     order: int = 3
 
     def __post_init__(self) -> None:
+        """Normalize constructor inputs and enforce model invariants."""
         if len(self.num_cells) != 2:
             raise ValueError("num_cells must contain two non-negative integers")
         num_cells = (
@@ -43,9 +44,11 @@ class PmlSpec:
 
     @classmethod
     def from_num_cells(cls, num_cells: tuple[int, int]) -> PmlSpec:
+        """Build a PML specification from x/y cell counts."""
         return cls(num_cells=num_cells)
 
     def as_dict(self) -> dict[str, float | int | tuple[int, int]]:
+        """Return a JSON-friendly representation of the specification."""
         return {
             "num_cells": self.num_cells,
             "sigma_max": self.sigma_max,
@@ -55,6 +58,7 @@ class PmlSpec:
         }
 
     def profile_dict(self) -> dict[str, float | int]:
+        """Return only the scalar stretch-profile settings used by the solver."""
         return {
             "sigma_max": self.sigma_max,
             "kappa_min": self.kappa_min,
@@ -70,6 +74,7 @@ class BoundarySpec:
     low: tuple[BoundaryCondition, BoundaryCondition] = ("pec", "pec")
 
     def __post_init__(self) -> None:
+        """Normalize constructor inputs and enforce model invariants."""
         if len(self.low) != 2:
             raise ValueError("low must contain two boundary conditions")
         normalized = tuple(str(value).lower() for value in self.low)
@@ -80,13 +85,16 @@ class BoundarySpec:
 
     @property
     def dmin_pmc(self) -> tuple[bool, bool]:
+        """Return whether each low-edge boundary uses magnetic symmetry."""
         return self.low[0] == "pmc", self.low[1] == "pmc"
 
     @property
     def dmin_pml(self) -> tuple[bool, bool]:
+        """Return whether each low-edge boundary is open to PML stretching."""
         return self.low[0] == "pec", self.low[1] == "pec"
 
     def as_dict(self) -> dict[str, tuple[str, str]]:
+        """Return a JSON-friendly representation of the specification."""
         return {"low": self.low}
 
 
@@ -105,6 +113,7 @@ class Grid:
     normal_coordinate: float = 0.0
 
     def __post_init__(self) -> None:
+        """Normalize constructor inputs and enforce model invariants."""
         x_edges = tuple(float(value) for value in self.x_edges)
         y_edges = tuple(float(value) for value in self.y_edges)
         object.__setattr__(self, "x_edges", x_edges)
@@ -120,6 +129,7 @@ class Grid:
 
     @property
     def shape(self) -> tuple[int, int]:
+        """Return the number of cells along the two mode-plane axes."""
         return len(self.x_edges) - 1, len(self.y_edges) - 1
 
 
@@ -137,6 +147,7 @@ class Materials:
     mu_tensor: np.ndarray | None = None
 
     def __post_init__(self) -> None:
+        """Normalize constructor inputs and enforce model invariants."""
         eps_tensor = np.asarray(self.eps_tensor, dtype=np.complex128)
         if eps_tensor.shape != (3, 3, *self.grid.shape):
             raise ValueError("eps_tensor must have shape (3, 3, nx, ny) matching the grid")
@@ -168,6 +179,7 @@ class Materials:
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
     ) -> Materials:
+        """Build a material grid from scalar or diagonal tensor components."""
         grid = Grid(
             tuple(float(value) for value in x_edges),
             tuple(float(value) for value in y_edges),
@@ -213,6 +225,7 @@ class Materials:
         normal_axis: Literal[0, 1, 2] = 2,
         normal_coordinate: float = 0.0,
     ) -> Materials:
+        """Build a material grid from diagonal and off-diagonal tensor components."""
         grid = Grid(
             tuple(float(value) for value in x_edges),
             tuple(float(value) for value in y_edges),
@@ -306,6 +319,7 @@ class Materials:
         cell_count = len(edge_values) - 1
 
         def expand(label: str, values: np.ndarray | None) -> np.ndarray | None:
+            """Expand a one-dimensional component onto the padded mode-plane grid."""
             if values is None:
                 return None
             array = np.asarray(values, dtype=np.complex128)
@@ -443,10 +457,12 @@ class Materials:
 
     @property
     def shape(self) -> tuple[int, int]:
+        """Return the number of cells along the two mode-plane axes."""
         return self.grid.shape
 
     @property
     def is_diagonal(self) -> bool:
+        """Return whether epsilon and mu contain only diagonal components."""
         off_diagonal = np.ones((3, 3), dtype=bool)
         np.fill_diagonal(off_diagonal, False)
         mu_tensor = self._resolved_mu_tensor()
@@ -455,17 +471,21 @@ class Materials:
         )
 
     def flat_eps_tensor(self) -> np.ndarray:
+        """Return epsilon as flattened per-cell 3x3 tensors."""
         return self.eps_tensor.reshape(3, 3, -1)
 
     def flat_mu_tensor(self) -> np.ndarray:
+        """Return mu as flattened per-cell 3x3 tensors."""
         return self._resolved_mu_tensor().reshape(3, 3, -1)
 
     def _resolved_mu_tensor(self) -> np.ndarray:
+        """Return the initialized permeability tensor."""
         if self.mu_tensor is None:
             raise RuntimeError("mu_tensor was not initialized")
         return self.mu_tensor
 
     def diagonal_eps(self) -> np.ndarray:
+        """Return the three diagonal epsilon components as a stacked array."""
         return np.stack([self.eps_tensor[axis, axis] for axis in range(3)], axis=0)
 
 
@@ -476,6 +496,7 @@ def _stack_diagonal_components(
     yy: np.ndarray | None,
     zz: np.ndarray | None,
 ) -> np.ndarray:
+    """Validate and stack x/y/z diagonal tensor components."""
     xx_array = np.asarray(xx, dtype=np.complex128)
     if xx_array.shape != shape:
         raise ValueError(f"{label}_xx must have shape {shape}")
@@ -487,6 +508,7 @@ def _stack_diagonal_components(
 
 
 def _coerce_integral(name: str, value: object, *, minimum: int) -> int:
+    """Coerce index-like values while rejecting floats and booleans."""
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must contain integers")
     try:
@@ -501,6 +523,7 @@ def _coerce_integral(name: str, value: object, *, minimum: int) -> int:
 
 
 def _normalize_slice_axis(axis: SliceAxis) -> int:
+    """Map slice-axis aliases onto a zero-based axis index."""
     if axis in {"x", 0}:
         return 0
     if axis in {"y", 1}:
@@ -509,6 +532,7 @@ def _normalize_slice_axis(axis: SliceAxis) -> int:
 
 
 def _diagonal_to_full_tensor(diagonal: np.ndarray) -> np.ndarray:
+    """Expand diagonal components into a full 3x3 tensor grid."""
     tensor = np.zeros((3, 3, *diagonal.shape[1:]), dtype=np.complex128)
     for axis in range(3):
         tensor[axis, axis, :, :] = diagonal[axis]
@@ -527,6 +551,7 @@ def _assign_tensor_offdiagonal(
     zx: np.ndarray | None,
     zy: np.ndarray | None,
 ) -> None:
+    """Validate and assign optional off-diagonal tensor components."""
     for (row, col), suffix, values in [
         ((0, 1), "xy", xy),
         ((0, 2), "xz", xz),
@@ -557,6 +582,7 @@ class Spec:
     bend_axis: Literal[0, 1] | None = None
 
     def __post_init__(self) -> None:
+        """Normalize constructor inputs and enforce model invariants."""
         if self.num_modes <= 0:
             raise ValueError("num_modes must be positive")
         if self.target_neff is not None and self.target_neff <= 0:
@@ -579,12 +605,15 @@ class Spec:
 
     @property
     def has_angle(self) -> bool:
+        """Return whether an angular coordinate transform is requested."""
         return abs(float(self.angle_theta)) > 0.0
 
     @property
     def has_bend(self) -> bool:
+        """Return whether a bend transform is requested."""
         return self.bend_radius is not None
 
     @property
     def has_transform(self) -> bool:
+        """Return whether any coordinate transform is requested."""
         return self.has_angle or self.has_bend

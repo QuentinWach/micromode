@@ -1,3 +1,5 @@
+"""Render several standalone material-grid demonstrations for MicroMode."""
+
 from __future__ import annotations
 
 import argparse
@@ -23,6 +25,8 @@ AIR_EPS = 1.0
 
 @dataclass(frozen=True)
 class GridDemo:
+    """Definition of one material-grid demonstration case."""
+
     key: str
     title: str
     description: str
@@ -37,6 +41,7 @@ class GridDemo:
 
 
 def main() -> None:
+    """Run the example script from parsed command-line options."""
     args = parse_args()
     selected = select_demos(args.cases)
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +72,7 @@ def main() -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the example script."""
     parser = argparse.ArgumentParser(description="Run pure Materials MicroMode demos.")
     parser.add_argument(
         "--output-dir",
@@ -85,6 +91,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def select_demos(case_keys: Sequence[str] | None) -> list[GridDemo]:
+    """Return the selected demo cases in display order."""
     demos = grid_demos()
     if not case_keys:
         return demos
@@ -97,6 +104,7 @@ def select_demos(case_keys: Sequence[str] | None) -> list[GridDemo]:
 
 
 def grid_demos() -> list[GridDemo]:
+    """Return all available material-grid demo definitions."""
     return [
         GridDemo(
             key="strip_grid",
@@ -156,6 +164,7 @@ def grid_demos() -> list[GridDemo]:
 
 
 def make_strip_grid() -> tuple[sm.Materials, np.ndarray]:
+    """Build a rectangular strip-waveguide demo grid."""
     x_edges, y_edges, xx, yy = demo_grid(nx=42, ny=30)
     eps = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
     eps[(np.abs(xx) <= 0.25) & (np.abs(yy) <= 0.11)] = SI_EPS
@@ -163,6 +172,7 @@ def make_strip_grid() -> tuple[sm.Materials, np.ndarray]:
 
 
 def make_slot_grid() -> tuple[sm.Materials, np.ndarray]:
+    """Build a slot-waveguide demo grid."""
     x_edges, y_edges, xx, yy = demo_grid(nx=42, ny=30)
     eps = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
     rail = np.abs(yy) <= 0.11
@@ -173,6 +183,7 @@ def make_slot_grid() -> tuple[sm.Materials, np.ndarray]:
 
 
 def make_rib_grid() -> tuple[sm.Materials, np.ndarray]:
+    """Build a rib-waveguide demo grid."""
     x_edges, y_edges, xx, yy = demo_grid(nx=46, ny=30)
     eps = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
     slab = (np.abs(xx) <= 0.72) & (yy >= -0.16) & (yy <= -0.05)
@@ -182,6 +193,7 @@ def make_rib_grid() -> tuple[sm.Materials, np.ndarray]:
 
 
 def make_circular_rod_grid() -> tuple[sm.Materials, np.ndarray]:
+    """Build a circular dielectric rod demo grid."""
     x_edges, y_edges, xx, yy = demo_grid(nx=42, ny=34, width=2.2, height=1.8)
     eps = np.full(xx.shape, AIR_EPS, dtype=np.complex128)
     eps[xx**2 + yy**2 <= 0.32**2] = 2.6**2
@@ -189,6 +201,7 @@ def make_circular_rod_grid() -> tuple[sm.Materials, np.ndarray]:
 
 
 def make_anisotropic_tensor_grid() -> tuple[sm.Materials, np.ndarray]:
+    """Build a tensor-material demo grid."""
     x_edges, y_edges, xx, yy = demo_grid(nx=28, ny=22, width=2.0, height=1.4)
     core = (np.abs(xx) <= 0.32) & (np.abs(yy) <= 0.16)
     eps_xx = np.full(xx.shape, SIO2_EPS, dtype=np.complex128)
@@ -220,6 +233,7 @@ def demo_grid(
     width: float = 2.4,
     height: float = 1.6,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Build a rectangular grid with one or more filled boxes."""
     x_edges = np.linspace(-width / 2, width / 2, nx + 1)
     y_edges = np.linspace(-height / 2, height / 2, ny + 1)
     x = 0.5 * (x_edges[:-1] + x_edges[1:])
@@ -235,6 +249,7 @@ def plot_demo(
     data: sm.Result,
     output_path: Path,
 ) -> None:
+    """Plot one demo result and save it."""
     mode_count = int(data.n_complex.shape[1])
     columns = ("eps_xx", "|E|", "Re(Ex)", "Re(Ey)", "Re(Ez)")
     fig, axes = plt.subplots(
@@ -277,6 +292,7 @@ def plot_demo(
 def component_image(
     data: sm.Result, component: str, mode_index: int
 ) -> tuple[tuple[str, str], tuple[np.ndarray, np.ndarray], np.ndarray]:
+    """Extract one field component image for plotting."""
     field = data.field_components[component]
     image = field.isel(f=0, mode_index=mode_index).squeeze(drop=True)
     spatial_dims = tuple(dim for dim in ("x", "y", "z") if dim in image.dims and image.sizes[dim] > 1)
@@ -291,6 +307,7 @@ def component_image(
 def electric_magnitude_image(
     data: sm.Result, mode_index: int
 ) -> tuple[tuple[str, str], tuple[np.ndarray, np.ndarray], np.ndarray]:
+    """Compute electric-field magnitude for one mode image."""
     dims, coords, ex = component_image(data, "Ex", mode_index)
     magnitude_squared = np.abs(ex) ** 2
     for component in ("Ey", "Ez"):
@@ -311,6 +328,7 @@ def draw_image(
     cmap: str,
     symmetric: bool,
 ):
+    """Draw a field image on an axes object with consistent scaling."""
     x, y = coords
     dx = float(np.median(np.diff(x))) if len(x) > 1 else 1.0
     dy = float(np.median(np.diff(y))) if len(y) > 1 else 1.0
@@ -345,6 +363,7 @@ def draw_image(
 
 
 def plot_eps_contours(ax: Axes, coords: tuple[np.ndarray, np.ndarray], eps: np.ndarray) -> None:
+    """Overlay material-index contours on a field plot."""
     values = np.asarray(eps.real, dtype=float)
     if np.nanmax(values) - np.nanmin(values) < 1e-12:
         return

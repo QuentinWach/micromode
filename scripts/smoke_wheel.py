@@ -11,6 +11,7 @@ import micromode as mm
 
 
 def main() -> None:
+    """Solve a tiny problem and round-trip HDF5 in an installed wheel."""
     x_edges = np.linspace(-0.8, 0.8, 7)
     y_edges = np.linspace(-0.6, 0.6, 6)
     x = 0.5 * (x_edges[:-1] + x_edges[1:])

@@ -26,6 +26,7 @@ N_AIR = 1.0
 
 
 def publication_style() -> dict[str, object]:
+    """Return matplotlib rcParams for generated example figures."""
     return {
         "font.family": "DejaVu Sans",
         "font.size": 9,
@@ -46,6 +47,7 @@ def publication_style() -> dict[str, object]:
 
 
 def main() -> None:
+    """Run the example script from parsed command-line options."""
     parser = argparse.ArgumentParser(description="Solve and plot a rasterized angled slab waveguide.")
     parser.add_argument("--step", type=float, default=0.02, help="Grid step in microns.")
     parser.add_argument("--subpixels", type=int, default=7, help="Subpixel samples per axis for material averaging.")
@@ -102,6 +104,7 @@ def ridge_waveguide_materials(step: float = 0.02, subpixels: int = 7) -> tuple[m
 
 
 def centered_edges(*, width: float, step: float) -> np.ndarray:
+    """Return evenly spaced cell edges centered on zero."""
     if step <= 0.0:
         raise ValueError("step must be positive")
     cells = round(width / step)
@@ -111,6 +114,7 @@ def centered_edges(*, width: float, step: float) -> np.ndarray:
 
 
 def offset_edges(*, lower: float, upper: float, step: float) -> np.ndarray:
+    """Return evenly spaced cell edges covering an explicit interval."""
     if step <= 0.0:
         raise ValueError("step must be positive")
     if upper <= lower:
@@ -127,6 +131,7 @@ def subpixel_centers(
     *,
     subpixels: int,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Return subpixel sample coordinates inside each solver cell."""
     if subpixels <= 0:
         raise ValueError("subpixels must be positive")
     offsets = (np.arange(subpixels, dtype=float) + 0.5) / subpixels
@@ -139,6 +144,7 @@ def subpixel_centers(
 
 
 def plot_index(materials: mm.Materials, eps: np.ndarray, path: Path) -> None:
+    """Plot the material index profile."""
     x_edges = np.asarray(materials.grid.x_edges, dtype=float)
     y_edges = np.asarray(materials.grid.y_edges, dtype=float)
     x = 0.5 * (x_edges[:-1] + x_edges[1:])
@@ -168,6 +174,7 @@ def plot_index(materials: mm.Materials, eps: np.ndarray, path: Path) -> None:
 
 
 def plot_modes(materials: mm.Materials, eps: np.ndarray, data: mm.Result, path: Path) -> None:
+    """Plot representative mode fields."""
     components = ("Ex", "Ey", "Hx", "Hy")
     x_edges = np.asarray(materials.grid.x_edges, dtype=float)
     y_edges = np.asarray(materials.grid.y_edges, dtype=float)
@@ -245,6 +252,7 @@ def plot_readme_figure(materials: mm.Materials, eps: np.ndarray, data: mm.Result
 
 
 def draw_material_outline(ax, x: np.ndarray, y: np.ndarray, eps: np.ndarray, **kwargs) -> None:
+    """Draw an epsilon contour outlining the waveguide material."""
     if "color" in kwargs:
         kwargs["colors"] = kwargs.pop("color")
     if "linewidth" in kwargs:
@@ -254,17 +262,20 @@ def draw_material_outline(ax, x: np.ndarray, y: np.ndarray, eps: np.ndarray, **k
 
 
 def format_complex(value: complex, *, precision: int) -> str:
+    """Format a complex number for compact plot annotations."""
     sign = "+" if value.imag >= 0.0 else "-"
     return f"{value.real:.{precision}f}{sign}{abs(value.imag):.{precision}g}i"
 
 
 def normalize_signed(values: np.ndarray) -> np.ndarray:
+    """Normalize signed field data to unit peak magnitude."""
     values = np.asarray(values, dtype=float)
     scale = max(float(np.nanmax(np.abs(values))), np.finfo(float).eps)
     return values / scale
 
 
 def save_figure(fig, path: Path) -> None:
+    """Write a figure to disk and close it."""
     fig.savefig(path)
     fig.savefig(path.with_suffix(".pdf"))
     fig.savefig(path.with_suffix(".svg"))

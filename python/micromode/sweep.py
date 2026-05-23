@@ -20,6 +20,7 @@ class Sweep:
     parameter_name: str = "parameter"
 
     def __post_init__(self) -> None:
+        """Validate sweep lengths and mode-count consistency."""
         values = np.asarray(self.values, dtype=float)
         if values.ndim != 1:
             raise ValueError("values must be one-dimensional")
@@ -35,18 +36,22 @@ class Sweep:
 
     @property
     def num_modes(self) -> int:
+        """Return the shared number of modes in the sweep."""
         return int(self.results[0].n_complex.sizes["mode_index"])
 
     @property
     def n_eff(self) -> np.ndarray:
+        """Return real effective indices arranged by sweep step and mode."""
         return np.vstack([np.asarray(result.n_eff.values)[0] for result in self.results])
 
     @property
     def n_complex(self) -> np.ndarray:
+        """Return complex effective indices arranged by sweep step and mode."""
         return np.vstack([np.asarray(result.n_complex.values)[0] for result in self.results])
 
     @property
     def pol_fraction(self) -> dict[str, np.ndarray]:
+        """Return TE/TM fractions arranged by sweep step and mode."""
         return {
             "te": np.vstack([np.asarray(result.pol_fraction["te"].values)[0] for result in self.results]),
             "tm": np.vstack([np.asarray(result.pol_fraction["tm"].values)[0] for result in self.results]),
@@ -54,6 +59,7 @@ class Sweep:
 
     @property
     def pol_fraction_waveguide(self) -> dict[str, np.ndarray]:
+        """Return waveguide TE/TM fractions arranged by sweep step and mode."""
         return {
             "te": np.vstack([np.asarray(result.pol_fraction_waveguide["te"].values)[0] for result in self.results]),
             "tm": np.vstack([np.asarray(result.pol_fraction_waveguide["tm"].values)[0] for result in self.results]),
@@ -114,10 +120,12 @@ def track_modes_by_overlap(
 
 
 def _assignment_score(overlaps: np.ndarray, order: tuple[int, ...]) -> float:
+    """Score a proposed mode assignment by total overlap magnitude."""
     return float(sum(overlaps[mode_index, source_index] for mode_index, source_index in enumerate(order)))
 
 
 def _reorder_result_modes(result: Result, order: tuple[int, ...]) -> Result:
+    """Return a result with all mode-indexed arrays reordered together."""
     mode_coord = np.arange(len(order))
     n_complex = result.n_complex.isel(mode_index=list(order)).assign_coords(mode_index=mode_coord)
     field_components = {
