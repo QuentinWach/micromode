@@ -53,6 +53,12 @@ def parse_args() -> argparse.Namespace:
         help="Run local MicroMode solves for supported fixture cases and compare n_eff/fields.",
     )
     parser.add_argument(
+        "--backend",
+        choices=("rust_sparse", "scipy_reference"),
+        default="rust_sparse",
+        help="Local MicroMode backend to use with --run-local.",
+    )
+    parser.add_argument(
         "--fail-on-tolerance",
         action="store_true",
         help="Exit nonzero when a supported local comparison exceeds fixture tolerances.",
@@ -85,7 +91,7 @@ def main() -> None:
 
     report = {
         "fixture_root": str(fixture_root),
-        "backend": "rust_sparse" if args.run_local else None,
+        "backend": args.backend if args.run_local else None,
         "cases": [],
         "summary": {"pass": 0, "fail": 0, "unsupported": 0, "not_run": 0},
     }
@@ -104,8 +110,8 @@ def main() -> None:
         )
         status = {"status": "not_run", "summary": "local solve not requested"}
         if args.run_local:
-            status = _compare_local_case(fixture_root, entry)
-            print(f"      local rust_sparse: {status['status']}: {status['summary']}")
+            status = _compare_local_case(fixture_root, entry, backend=args.backend)
+            print(f"      local {args.backend}: {status['status']}: {status['summary']}")
             if status["failed"]:
                 failures += 1
             if status.get("support") == "production" and status["status"] != "pass":
@@ -125,7 +131,7 @@ def main() -> None:
         raise SystemExit(f"{production_gaps} production fixture comparison(s) did not pass")
 
 
-def _compare_local_case(root: Path, entry: dict) -> dict:
+def _compare_local_case(root: Path, entry: dict, *, backend: str = "rust_sparse") -> dict:
     case_id = entry["case_id"]
     try:
         import micromode as sm
@@ -146,8 +152,8 @@ def _compare_local_case(root: Path, entry: dict) -> dict:
     support = recipe.get("support", "production")
     if recipe.get("unsupported"):
         return _status("unsupported", recipe["unsupported"], support=support)
-    if tuple(recipe.get("num_pml", (0, 0))) != (0, 0):
-        return _status("unsupported", "local Rust comparison does not support PML", support=support)
+    if backend not in {"rust_sparse", "scipy_reference"}:
+        return _status("fail", f"unknown backend: {backend}", support=support)
 
     tangent_dims = tuple(dim for dim in ("x", "y", "z") if dim in ref_ex.dims and ref_ex.sizes.get(dim, 0) > 1)
     if len(tangent_dims) != 2:
@@ -168,12 +174,13 @@ def _compare_local_case(root: Path, entry: dict) -> dict:
             tangent_dims=tangent_dims,
             normal_dim=normal_dim,
             normal_coord=normal_coord,
+            backend=backend,
         )
     except NotImplementedError as exc:
         return _status("unsupported", str(exc), support=support)
     actual_n = _reorder_modes(result.n_complex.values, recipe)
     n_error = float(np.max(np.abs(actual_n - ref_n.values)))
-    tolerance = _n_tolerance(entry, recipe)
+    tolerance = _n_tolerance(entry, recipe, backend=backend)
     failed = n_error > tolerance
 
     field_errors = []
@@ -277,7 +284,7 @@ _LOCAL_CASES = {
         "direction": "-",
         "dmin_pmc": (False, True),
         "trim_edges": ((1, 1), (0, 0)),
-        "backend_tolerances": {"rust_sparse": 1e-5},
+        "backend_tolerances": {"rust_sparse": 1e-5, "scipy_reference": 1e-5},
         "sort_order": "ascending",
         "krylov_dim": 64,
     },
@@ -357,6 +364,7 @@ def _solve_recipe(
     tangent_dims: tuple[str, str],
     normal_dim: str,
     normal_coord: float,
+    backend: str,
 ):
     freqs = tuple(float(freq) for freq in ref_n.coords["f"].values)
     if recipe.get("solve_each_frequency"):
@@ -373,6 +381,7 @@ def _solve_recipe(
                 tangent_dims=tangent_dims,
                 normal_dim=normal_dim,
                 normal_coord=normal_coord,
+                backend=backend,
             )
             if first_result is None:
                 first_result = result
@@ -414,6 +423,7 @@ def _solve_recipe(
         tangent_dims=tangent_dims,
         normal_dim=normal_dim,
         normal_coord=normal_coord,
+        backend=backend,
     )
 
 
@@ -427,6 +437,7 @@ def _solve_recipe_for_freq(
     tangent_dims: tuple[str, str],
     normal_dim: str,
     normal_coord: float,
+    backend: str,
 ):
     freqs = (float(freq),) if np.isscalar(freq) else tuple(float(value) for value in freq)
     centers = tuple((axis_edges[:-1] + axis_edges[1:]) / 2 for axis_edges in edges)
@@ -453,6 +464,7 @@ def _solve_recipe_for_freq(
         bend_radius=recipe.get("bend_radius"),
         bend_axis=recipe.get("bend_axis", 0),
         krylov_dim=recipe.get("krylov_dim"),
+        backend="scipy-reference" if backend == "scipy_reference" else "rust",
     )
 
 
@@ -523,9 +535,9 @@ def _status(status: str, summary: str, **details) -> dict:
     return {"status": status, "failed": status == "fail", "summary": summary, **details}
 
 
-def _n_tolerance(entry: dict, recipe: dict | None = None) -> float:
+def _n_tolerance(entry: dict, recipe: dict | None = None, *, backend: str = "rust_sparse") -> float:
     if recipe is not None:
-        backend_tolerance = recipe.get("backend_tolerances", {}).get("rust_sparse")
+        backend_tolerance = recipe.get("backend_tolerances", {}).get(backend)
         if backend_tolerance is not None:
             return float(backend_tolerance)
     return float(

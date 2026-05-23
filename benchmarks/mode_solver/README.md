@@ -21,7 +21,16 @@ the mode plane:
 uv run python benchmarks/compare_mode_solver_fixtures.py --suite extended --run-local --report-json tmp/reference_fixture_validation_rust_sparse.json
 ```
 
-Local fixture validation uses the Rust sparse backend.
+Local fixture validation uses the Rust sparse backend by default. To run the same reconstructable
+fixture recipes through the SciPy reference backend:
+
+```bash
+uv run --extra scipy python benchmarks/compare_mode_solver_fixtures.py \
+  --suite extended \
+  --run-local \
+  --backend scipy_reference \
+  --report-json tmp/reference_fixture_validation_scipy_reference.json
+```
 
 Local validation reports each case as `pass`, `fail`, or `unsupported`. `fail` means the local
 solver ran but exceeded the fixture tolerance; `unsupported` means the case is explicitly classified
