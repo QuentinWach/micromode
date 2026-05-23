@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.0a5 - 2026-05-23
+
+- Made the SciPy reference solver the default backend and removed the Rust
+  backend from the package.
+- Added sparse SciPy operator coverage, fixture parity checks, and solver
+  benchmark comparisons against matched Tidy3D profiles.
+- Improved numerical handling for anisotropic, PML, interpolation, and sweep
+  diagnostic paths.
+- Expanded examples and documentation for hybridization sweeps, material-grid
+  demos, backend trust, release workflow, and solver method details.
+- Tightened release artifact checks for pure-Python wheels and refreshed package
+  dependency constraints.
+
 ## 0.1.0a4 - 2026-05-20
 
 - Fixed y-normal field mapping so returned global fields use a right-handed
