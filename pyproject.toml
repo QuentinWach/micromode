@@ -1,7 +1,7 @@
 [project]
 name = "micromode"
 version = "0.1.0a4"
-description = "Rust-backed photonics mode solver with a small Python API."
+description = "SciPy-based photonics mode solver with a small Python API."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = "Apache-2.0"
@@ -24,7 +24,6 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "Programming Language :: Rust",
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: POSIX :: Linux",
@@ -35,6 +34,7 @@ dependencies = [
   "h5py>=3.10,<4.0",
   "matplotlib>=3.8,<4.0",
   "numpy>=2.2.6,<2.5.0",
+  "scipy>=1.11,<2.0",
   "xarray>=2023.08,<2026.5.0",
 ]
 
@@ -47,7 +47,6 @@ Changelog = "https://github.com/QuentinWach/micromode/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
-  "maturin>=1.7,<2",
   "packaging>=24.2",
   "pkginfo>=1.12.1.2",
   "pyright>=1.1.390,<2",
@@ -60,17 +59,17 @@ dev = [
 ]
 
 [build-system]
-requires = ["maturin>=1.7,<2"]
-build-backend = "maturin"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv]
 package = true
 
-[tool.maturin]
-module-name = "micromode._core"
-python-source = "python"
-features = ["extension-module"]
-auditwheel = "skip"
+[tool.setuptools.package-dir]
+"" = "python"
+
+[tool.setuptools.packages.find]
+where = ["python"]
 
 [tool.pytest.ini_options]
 addopts = "--assert=plain"

@@ -1,6 +1,8 @@
 # micromode
 
-An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**.
+MicroMode is a transparent, grid-first SciPy mode solver for rasterized
+photonics workflows.
 
 ```bash
 pip install micromode
@@ -15,15 +17,25 @@ pip install micromode
 
 ## Why Use It?
 
-- **Grid-first API**: pass arrays directly, with no required geometry model.
-- **Fast**, portable Rust sparse backend: one production solve path.
-- **Practical** outputs: fields, `n_eff`, `k_eff`, mode area, polarization fractions,
-  Lorentz overlaps, plotting, dataframe export, and HDF5 save/load.
+- **Grid-first API**: pass already-rasterized material tensors and grid edges
+  directly, with no required CAD or geometry model.
+- **Readable SciPy implementation**: sparse operators are assembled in Python
+  and solved with SciPy/ARPACK, so the numerical path can be inspected by users
+  who do not want to trust a custom native solver.
+- **Small integration surface**: MicroMode is the solver piece you embed after
+  geometry has already been rasterized by an FDTD, FEM, or custom photonics
+  pipeline.
 - **Tensor-aware**: supports scalar, diagonal anisotropic, and full tensor material
-  grids.
+  grids, plus transformed angle and bend solves.
+- **Practical outputs**: coordinate-aware fields, `n_eff`, `k_eff`, mode area,
+  polarization fractions, Lorentz overlaps, plotting, dataframe export, and
+  HDF5 save/load.
 - Works for both **2D cross sections and 1D slices**.
 
-You give it a material grid. It returns guided modes: effective indices, six-component fields, polarization metrics, mode area, overlaps, diagnostics, plots, and HDF5 output. MicroMode is intentionally not a CAD or geometry package. It is the solver piece you use after geometry has already been rasterized onto a mode-plane grid.
+MicroMode is intentionally not a full simulation platform or geometry package.
+That is the point: you give it a mode-plane material grid, and it returns guided
+modes with the diagnostics and result helpers needed by downstream simulation
+workflows.
 
 _Micromode is the **default mode solver** in the [BEAMZ FDTD engine](https://github.com/beamzorg/beamz)._
 
@@ -78,7 +90,7 @@ uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
 The SOI hybridization example sweeps the width of a 220 nm silicon ridge and
 solves several modes at each step. It shows how nearby modes exchange character
 as the geometry changes by plotting effective index and TE fraction across the
-sweep, then rendering representative field profiles.
+sweep in separate figures, then rendering representative field profiles.
 
 ```bash
 uv run --extra dev python examples/soi_hybridization_sweep.py
@@ -97,30 +109,13 @@ the public solver controls are summarized in [docs/mode-solver-methods.md](docs/
 
 ## Solver
 
-MicroMode is designed to make high-performance mode solving available without
-requiring users to install external solver stacks. The production backend is a
-**portable Rust [sparse](https://en.wikipedia.org/wiki/Sparse_matrix)
-[shift-invert](https://en.wikipedia.org/wiki/Preconditioner#Spectral_transformation)
-[eigensolver](https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors)**, so
-source installs and wheels do **not** depend on
-[ARPACK](https://en.wikipedia.org/wiki/ARPACK),
-[UMFPACK](https://en.wikipedia.org/wiki/UMFPACK),
-[SuiteSparse](https://en.wikipedia.org/wiki/SuiteSparse),
-[BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms)/
-[LAPACK](https://en.wikipedia.org/wiki/LAPACK), or a Fortran compiler.
-That matters for simulation workflows that need to run in CI, notebooks,
-container images, FDTD plugins, and cross-platform design tools.
+MicroMode assembles the finite-difference sparse operators in Python and solves
+the shift-invert eigenproblems with
+[SciPy/ARPACK](https://docs.scipy.org/doc/scipy/reference/sparse.linalg.html).
+That makes the numerical method easier for academic users to inspect and
+debug, while still using a trusted sparse eigensolver stack.
 
-The native solver is **not a dense fallback**. It uses
-[sparse](https://en.wikipedia.org/wiki/Sparse_matrix)
-[finite-difference](https://en.wikipedia.org/wiki/Finite_difference_method)
-operators throughout, applies
-[AMD fill-reducing ordering](https://en.wikipedia.org/wiki/Minimum_degree_algorithm)
-before sparse [LU factorization](https://en.wikipedia.org/wiki/LU_decomposition),
-stores LU factors in a packed format for repeated triangular solves, and runs an
-[Arnoldi iteration](https://en.wikipedia.org/wiki/Arnoldi_iteration) targeted
-around the requested effective index. The Arnoldi stage uses
-**shift-invert**, adaptive
-[Ritz-pair](https://en.wikipedia.org/wiki/Ritz_method) checkpointing, early
-stopping once requested modes are stable, and selective Ritz vector
-reconstruction so work is spent on the modes that will actually be returned.
+This means MicroMode is differentiated by workflow and inspectability rather
+than by a custom solver engine: it is built for users who already have
+permittivity on a Yee grid and want a focused, auditable mode-solver component
+that fits cleanly into a larger photonics pipeline.

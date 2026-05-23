@@ -1,3 +1,5 @@
+"""Shared helpers for reading committed mode-solver reference fixtures."""
+
 from __future__ import annotations
 
 import hashlib
@@ -15,22 +17,27 @@ _PREFERRED_DIMS = ("x", "y", "z", "f", "mode_index")
 
 
 def case_dir(root: Path, case_id: str) -> Path:
+    """Return the directory containing one fixture case."""
     return root / case_id
 
 
 def data_path(root: Path, case_id: str) -> Path:
+    """Return the HDF5 path for one fixture case."""
     return case_dir(root, case_id) / "mode_data.hdf5"
 
 
 def summary_path(root: Path, case_id: str) -> Path:
+    """Return the JSON summary path for one fixture case."""
     return case_dir(root, case_id) / "summary.json"
 
 
 def manifest_path(root: Path) -> Path:
+    """Return the manifest path for a fixture suite."""
     return root / "manifest.json"
 
 
 def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest for a file."""
     digest = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
@@ -39,14 +46,17 @@ def sha256_file(path: Path) -> str:
 
 
 def read_json(path: Path) -> dict[str, Any]:
+    """Read a JSON file into a dictionary."""
     return json.loads(path.read_text())
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
+    """Write a dictionary as stable, pretty JSON."""
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
 def iter_manifest_entries(root: Path) -> tuple[dict[str, Any], ...]:
+    """Return all case entries from a suite manifest."""
     return tuple(read_json(manifest_path(root))["cases"])
 
 
@@ -65,6 +75,7 @@ def load_data_array(path: Path, name: str) -> xr.DataArray:
 
 
 def _read_xarray_group(group: Any) -> xr.DataArray:
+    """Read a legacy xarray-style HDF5 group."""
     if _XARRAY_VALUE_NAME not in group:
         raise KeyError(f"HDF5 group {group.name!r} is missing {_XARRAY_VALUE_NAME!r}")
     values = group[_XARRAY_VALUE_NAME][()]
@@ -75,6 +86,7 @@ def _read_xarray_group(group: Any) -> xr.DataArray:
 
 
 def _infer_dims(shape: tuple[int, ...], coords: dict[str, np.ndarray]) -> tuple[str, ...]:
+    """Infer dimension names from HDF5 coordinate datasets."""
     dims = tuple(dim for dim in _PREFERRED_DIMS if dim in coords)
     if len(dims) == len(shape) and all(len(coords[dim]) == size for dim, size in zip(dims, shape, strict=True)):
         return dims
@@ -86,6 +98,7 @@ def _infer_dims(shape: tuple[int, ...], coords: dict[str, np.ndarray]) -> tuple[
 
 
 def phase_aligned_relative_error(golden: np.ndarray, actual: np.ndarray) -> tuple[float, float]:
+    """Compare complex arrays after removing a global phase offset."""
     g = np.asarray(golden).reshape(-1)
     a = np.asarray(actual).reshape(-1)
     norm_g = float(np.linalg.norm(g))

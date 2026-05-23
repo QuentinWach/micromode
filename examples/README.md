@@ -18,7 +18,7 @@ Available cases:
 - `rib_grid`: slab plus ridge grid.
 - `circular_rod_grid`: circular dielectric inclusion rasterized on the grid.
 - `anisotropic_tensor_grid`: full tensor permittivity grid with off-diagonal terms.
-- `angled_bent_grid`: diagonal grid solved through the Rust tensorial angle/bend transform path.
+- `angled_bent_grid`: diagonal grid solved through the tensorial angle/bend transform path.
 
 Render selected cases with:
 
@@ -35,7 +35,7 @@ uv run --extra dev python examples/soi_hybridization_sweep.py
 ```
 
 That example sweeps a 220 nm fully etched SOI ridge width and writes the
-effective-index and TE-fraction plots to
+effective-index, TE-fraction, and field-profile plots to
 `examples/soi_hybridization_outputs/`.
 
 Recreate the Tidy3D modal sources/monitors mode plot:

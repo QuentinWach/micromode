@@ -64,19 +64,7 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Build wheel
-        shell: bash
-        run: |
-          extra_args=()
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-            extra_args+=(--auditwheel repair)
-          fi
-
-          uv tool run --from "maturin>=1.7,<2" maturin build \
-            --release \
-            --out dist \
-            --interpreter "$(uv python find ${{ matrix.python-version }})" \
-            --compatibility pypi \
-            "${extra_args[@]}"
+        run: uv build --wheel
 
       - name: Smoke-test wheel
         shell: bash
@@ -120,8 +108,7 @@ jobs:
           PY
           python scripts/check_release_metadata.py
           python scripts/check_dist_artifacts.py dist \
-            --require-cpython 3.10 3.11 3.12 3.13 \
-            --require-platform macosx manylinux win
+            --allow-pure-python
           twine check dist/*
 
       - name: Upload checked distributions

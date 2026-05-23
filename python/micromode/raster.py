@@ -8,13 +8,16 @@ from typing import Literal, cast
 import numpy as np
 import xarray as xr
 
-from ._rust import C_0, solve_diagonal_sparse, solve_tensorial_sparse
+from .constants import C_0
 from .models import BoundaryCondition, BoundarySpec, Materials, PmlSpec, SliceAxis, Spec
 from .result import Result
+from .scipy_reference import solve_diagonal_scipy_reference, solve_tensorial_scipy_reference
 
 _COMPONENTS = ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")
 
 
+# Public entry points keep geometry handling out of the solver core: callers
+# supply already-rasterized material arrays and grid coordinates.
 def solve_grid(
     *,
     eps_xx: np.ndarray,
@@ -84,6 +87,9 @@ def solve_grid(
         normal_axis=normal_axis,
         normal_coordinate=normal_coordinate,
     )
+
+    # Once the component arrays have been normalized into Materials, the full
+    # solve path is identical to solve_modes.
     return solve_modes(
         material_grid=material_grid,
         freqs=freqs,
@@ -148,10 +154,12 @@ def solve_slice(
 
     This is the convenience API for 2D FDTD simulations. The supplied material
     arrays vary along one mode-plane axis and MicroMode inserts a single
-    invariant cell along the other axis before using the same Rust sparse solve
-    path as ``solve_modes``.
+    invariant cell along the other axis before using the same sparse solve path
+    as ``solve_modes``.
     """
 
+    # A one-dimensional slice is converted into a thin 2D Materials object so it
+    # can reuse the same validation, solver dispatch, and result wrapping.
     material_grid = Materials.from_slice(
         eps_xx=eps_xx,
         eps_yy=eps_yy,
@@ -178,6 +186,8 @@ def solve_slice(
         normal_axis=normal_axis,
         normal_coordinate=normal_coordinate,
     )
+
+    # Delegate to solve_modes after the slice-specific padding is complete.
     return solve_modes(
         material_grid=material_grid,
         freqs=freqs,
@@ -218,18 +228,22 @@ def solve_modes(
     """Solve modes for an already-rasterized material tensor grid.
 
     This is the preferred Beamz integration point. Beamz owns geometry and
-    material rasterization; MicroMode owns the sparse mode solve and field
+    material rasterization; MicroMode owns the sparse SciPy mode solve and field
     reconstruction on the supplied grid.
     """
-    # Main Python-to-Rust orchestration layer. It validates user-facing grid
-    # objects, solves one frequency at a time, then wraps flattened Rust outputs
-    # back into coordinate-aware xarray arrays.
+    # Main solver orchestration layer. It validates user-facing grid objects,
+    # solves one frequency at a time, then wraps flattened solver outputs into
+    # coordinate-aware xarray arrays.
     if not isinstance(material_grid, Materials):
         raise TypeError("material_grid must be a Materials")
+
+    # Validate edge arrays against the tensor shape and resolve the frequency
+    # input before any expensive sparse work starts.
     shape = material_grid.shape
     x_edges_arr = _validate_edges("x_edges", material_grid.grid.x_edges, shape[0])
     y_edges_arr = _validate_edges("y_edges", material_grid.grid.y_edges, shape[1])
     solve_freqs = _resolve_freqs(freqs=freqs, wavelength=wavelength)
+
     if spec is not None:
         # Spec is a convenience bundle. Once unpacked, the rest of the function
         # follows exactly the same path as explicit keyword arguments.
@@ -241,6 +255,8 @@ def solve_modes(
         angle_phi = spec.angle_phi
         bend_radius = spec.bend_radius
         bend_axis = 0 if spec.bend_axis is None else spec.bend_axis
+
+    # Normalize scalar options and compact model objects at the API boundary.
     if num_modes <= 0:
         raise ValueError("num_modes must be positive")
     if direction not in {"+", "-"}:
@@ -251,6 +267,9 @@ def solve_modes(
         raise ValueError("bend_radius magnitude must be larger than 0")
     if bend_axis not in {0, 1}:
         raise ValueError("bend_axis must be 0 or 1")
+
+    # Component filtering happens after solving so field reconstruction still has
+    # every component needed for normalization and coordinate conversion.
     requested_components = tuple(components or _COMPONENTS)
     unknown = set(requested_components).difference(_COMPONENTS)
     if unknown:
@@ -262,6 +281,8 @@ def solve_modes(
     solver_runs = []
     fields_by_component: dict[str, list[np.ndarray]] = {component: [] for component in requested_components}
     for freq in solve_freqs:
+        # The sparse solver is frequency-local; multi-frequency solves are a
+        # deterministic loop plus a final stack into xarray dimensions.
         n_complex, fields, solver_info = _solve_one_frequency(
             x_edges=x_edges_arr,
             y_edges=y_edges_arr,
@@ -278,9 +299,9 @@ def solve_modes(
             bend_axis=int(bend_axis),
             material_grid=material_grid,
         )
-        # Rust solves in local coordinates where local z is the propagation
-        # normal. Convert field labels back to the global x/y/z axes requested by
-        # the material grid before exposing them.
+        # The solver uses local coordinates where local z is the propagation
+        # normal. Convert field labels back to the global x/y/z axes requested
+        # by the material grid before exposing them.
         fields = _local_fields_to_global(fields, normal_axis=material_grid.grid.normal_axis)
         n_rows.append(n_complex)
         solver_runs.append(solver_info)
@@ -288,6 +309,7 @@ def solve_modes(
             if component in fields_by_component:
                 fields_by_component[component].append(values)
 
+    # Convert accumulated lists into the public Result layout only once.
     n_values = np.asarray(n_rows, dtype=np.complex128)
     field_components = _field_data_arrays(
         fields_by_component,
@@ -328,10 +350,14 @@ def _solve_one_frequency(
     bend_radius: float | None,
     bend_axis: int,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Select the sparse formulation and solve a single frequency."""
     # Forward and backward spacings represent the local Yee grid. The derivative
     # builders need both because E and H components are staggered.
     dlf = (np.diff(x_edges), np.diff(y_edges))
     dlb = (_dual_steps(dlf[0]), _dual_steps(dlf[1]))
+
+    # Flatten tensors to the layout expected by scipy_reference while preserving
+    # the original grid metadata for result coordinates.
     eps_tensor = material_grid.flat_eps_tensor()
     mu_tensor = material_grid.flat_mu_tensor()
     if target_neff is None:
@@ -339,6 +365,9 @@ def _solve_one_frequency(
         # explicitly when hunting for modes near another branch.
         target_neff = float(np.sqrt(np.max(np.abs(eps_tensor))))
     target_neff = _shift_target_neff(float(target_neff))
+
+    # Coordinate transforms can introduce off-diagonal coupling, so diagonal
+    # dispatch must be decided after any transform is applied.
     has_transform = abs(angle_theta) > 0.0 or bend_radius is not None
     is_diagonal = material_grid.is_diagonal
     if has_transform:
@@ -356,7 +385,7 @@ def _solve_one_frequency(
         )
         if not (_is_diagonal_tensor(eps_tensor) and _is_diagonal_tensor(mu_tensor)):
             # Off-diagonal components require the tensorial first-order operator.
-            return _solve_one_frequency_rust_tensorial_sparse(
+            return _solve_one_frequency_scipy_tensorial(
                 eps_tensor=eps_tensor,
                 mu_tensor=mu_tensor,
                 dlf=dlf,
@@ -371,7 +400,7 @@ def _solve_one_frequency(
             )
         # If the transformed tensors remain diagonal, keep the faster diagonal
         # sparse formulation.
-        return _solve_one_frequency_rust_sparse(
+        return _solve_one_frequency_scipy(
             eps_tensor=eps_tensor,
             mu_tensor=mu_tensor,
             dlf=dlf,
@@ -386,7 +415,7 @@ def _solve_one_frequency(
         )
     if not is_diagonal:
         # User supplied a full tensor grid with no coordinate transform.
-        return _solve_one_frequency_rust_tensorial_sparse(
+        return _solve_one_frequency_scipy_tensorial(
             eps_tensor=eps_tensor,
             mu_tensor=mu_tensor,
             dlf=dlf,
@@ -399,8 +428,8 @@ def _solve_one_frequency(
             krylov_dim=krylov_dim,
             boundary_spec=boundary_spec,
         )
-    # Ordinary scalar/diagonal grids use the production diagonal sparse backend.
-    return _solve_one_frequency_rust_sparse(
+    # Ordinary scalar/diagonal grids use the diagonal sparse formulation.
+    return _solve_one_frequency_scipy(
         eps_tensor=eps_tensor,
         mu_tensor=mu_tensor,
         dlf=dlf,
@@ -415,7 +444,7 @@ def _solve_one_frequency(
     )
 
 
-def _solve_one_frequency_rust_sparse(
+def _solve_one_frequency_scipy(
     *,
     eps_tensor: np.ndarray,
     mu_tensor: np.ndarray,
@@ -429,10 +458,15 @@ def _solve_one_frequency_rust_sparse(
     krylov_dim: int | None,
     boundary_spec: BoundarySpec,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Run the diagonal SciPy solver and reshape its fields."""
+    # The diagonal solver has two transverse unknowns per cell: Ex and Ey.
     nx = len(dlf[0])
     ny = len(dlf[1])
     actual_krylov_dim = 32 if krylov_dim is None else int(krylov_dim)
-    n_complex, fields, solver_info = solve_diagonal_sparse(
+
+    # Convert frequency into the nondimensional derivative scale and angular
+    # frequency expected by the sparse reference implementation.
+    n_complex, fields, solver_info = solve_diagonal_scipy_reference(
         eps_tensor=eps_tensor,
         mu_tensor=mu_tensor,
         dlf=dlf,
@@ -449,19 +483,22 @@ def _solve_one_frequency_rust_sparse(
         krylov_dim=actual_krylov_dim,
         initial_vector=_default_initial_vector(2 * nx * ny, shape=(nx, ny)),
     )
+
+    # Solver fields are flattened by component; reshape them back to grid
+    # tensors and attach dispatch metadata for diagnostics.
     return (
         n_complex,
         _fields_to_grid(fields, (nx, ny)),
         _solver_info_with_context(
             solver_info,
-            backend_kind="diagonal_sparse",
+            backend_kind="diagonal_scipy_reference",
             shape=(nx, ny),
             krylov_dim=actual_krylov_dim,
         ),
     )
 
 
-def _solve_one_frequency_rust_tensorial_sparse(
+def _solve_one_frequency_scipy_tensorial(
     *,
     eps_tensor: np.ndarray,
     mu_tensor: np.ndarray,
@@ -475,10 +512,16 @@ def _solve_one_frequency_rust_tensorial_sparse(
     krylov_dim: int | None,
     boundary_spec: BoundarySpec,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
+    """Run the tensorial SciPy solver and reshape its fields."""
+    # The tensorial solver keeps four transverse unknowns per cell:
+    # Ex, Ey, Hx, and Hy.
     nx = len(dlf[0])
     ny = len(dlf[1])
     actual_krylov_dim = 32 if krylov_dim is None else int(krylov_dim)
-    n_complex, fields, solver_info = solve_tensorial_sparse(
+
+    # Full tensor coupling uses the first-order operator and solves directly for
+    # effective index rather than n_eff squared.
+    n_complex, fields, solver_info = solve_tensorial_scipy_reference(
         eps_tensor=eps_tensor,
         mu_tensor=mu_tensor,
         dlf=dlf,
@@ -495,12 +538,15 @@ def _solve_one_frequency_rust_tensorial_sparse(
         krylov_dim=actual_krylov_dim,
         initial_vector=_default_initial_vector(4 * nx * ny, shape=(nx, ny)),
     )
+
+    # Keep return structure identical to the diagonal path so solve_modes does
+    # not need backend-specific field handling.
     return (
         n_complex,
         _fields_to_grid(fields, (nx, ny)),
         _solver_info_with_context(
             solver_info,
-            backend_kind="tensorial_sparse",
+            backend_kind="tensorial_scipy_reference",
             shape=(nx, ny),
             krylov_dim=actual_krylov_dim,
         ),
@@ -518,17 +564,24 @@ def _transformed_material_tensors(
     bend_radius: float | None,
     bend_axis: int,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Apply angle and bend coordinate transforms to material tensors."""
     # Transformation-optics material update:
     #   eps' = J eps J.T / det(J)
     #   mu'  = J mu  J.T / det(J)
     # Angle and bend solves are handled by changing material tensors, then
-    # passing the resulting grid to the same Rust tensorial operator.
+    # passing the resulting grid to the same tensorial operator family.
     if eps.shape != mu.shape or eps.shape[:2] != (3, 3):
         raise ValueError("eps and mu tensors must both have shape (3, 3, nx, ny)")
+
+    # Work in flattened cell order because the sparse solvers consume per-cell
+    # 3x3 material matrices.
     nx, ny = eps.shape[2:]
     n = nx * ny
     eps_tensor = np.zeros((3, 3, n), dtype=np.complex128)
     mu_tensor = np.zeros((3, 3, n), dtype=np.complex128)
+
+    # Cell centers define material sample locations for affine angle transforms
+    # and H-field bend samples.
     x_centers = (x_edges[:-1] + x_edges[1:]) / 2
     y_centers = (y_edges[:-1] + y_edges[1:]) / 2
     # Slopes of the tilted propagation coordinate in the local x/y directions.
@@ -537,6 +590,8 @@ def _transformed_material_tensors(
 
     for ix, x_value in enumerate(x_centers):
         for iy, y_value in enumerate(y_centers):
+            # Convert the 2D cell index into the flattened tensor column used by
+            # the sparse assembly layer.
             flat = ix * ny + iy
             local_eps = eps[:, :, ix, iy]
             local_mu = mu[:, :, ix, iy]
@@ -569,6 +624,9 @@ def _transformed_material_tensors(
                 bend_jac_h = np.diag([1.0, 1.0, dwdz_h]).astype(np.complex128)
                 jac_e = bend_jac_e @ jac_e
                 jac_h = bend_jac_h @ jac_h
+
+            # Apply the transformation-optics tensor update separately for E and
+            # H because their Yee-grid sample locations can differ under bend.
             eps_tensor[:, :, flat] = jac_e @ local_eps @ jac_e.T / np.linalg.det(jac_e)
             mu_tensor[:, :, flat] = jac_h @ local_mu @ jac_h.T / np.linalg.det(jac_h)
     return eps_tensor, mu_tensor
@@ -577,6 +635,9 @@ def _transformed_material_tensors(
 def _resolve_pml_spec(
     pml: PmlSpec | tuple[int, int] | None,
 ) -> PmlSpec:
+    """Normalize user PML input into a PmlSpec."""
+    # The public API accepts compact tuples, but the solver only sees validated
+    # PmlSpec objects.
     if pml is None:
         return PmlSpec()
     if isinstance(pml, PmlSpec):
@@ -587,6 +648,8 @@ def _resolve_pml_spec(
 def _resolve_boundary_spec(
     boundary: BoundarySpec | tuple[str, str] | None,
 ) -> BoundarySpec:
+    """Normalize user boundary input into a BoundarySpec."""
+    # BoundarySpec handles case normalization and allowed-value validation.
     if boundary is None:
         return BoundarySpec()
     if isinstance(boundary, BoundarySpec):
@@ -601,8 +664,9 @@ def _solver_info_with_context(
     shape: tuple[int, int],
     krylov_dim: int,
 ) -> dict[str, object]:
-    # Rust reports backend-local data. Add enough Python-side context for saved
-    # Result files and benchmark reports to be self-describing.
+    """Attach Python-side dispatch metadata to solver diagnostics."""
+    # Add enough Python-side context for saved Result files and benchmark
+    # reports to be self-describing.
     out = dict(solver_info)
     out["backend_kind"] = backend_kind
     out["shape"] = shape
@@ -613,12 +677,18 @@ def _solver_info_with_context(
 
 
 def _is_diagonal_tensor(tensor: np.ndarray, *, atol: float = 1e-12) -> bool:
+    """Return whether a flattened tensor has negligible off-diagonal terms."""
+    # Only the first two tensor axes are structural; the remaining axis is the
+    # flattened cell index.
     off_diagonal = np.ones((3, 3), dtype=bool)
     np.fill_diagonal(off_diagonal, False)
     return bool(np.all(np.abs(tensor[off_diagonal]) <= atol))
 
 
 def _shift_target_neff(target_neff: float) -> float:
+    """Nudge the shift target away from exact eigenvalues for ARPACK stability."""
+    # Exact shifts can make shift-invert factorization singular; the tiny nudge
+    # preserves the requested target while avoiding exact equality.
     target_shift = float(10 * np.finfo(np.float32).eps)
     if abs(target_shift) > abs(target_neff * target_shift):
         return target_neff + target_shift
@@ -626,6 +696,9 @@ def _shift_target_neff(target_neff: float) -> float:
 
 
 def _validate_edges(name: str, values: Sequence[float], cell_count: int) -> np.ndarray:
+    """Validate mode-plane edge coordinates against a cell count."""
+    # Edge validation is repeated here because callers may provide an existing
+    # Materials object from outside the dataclass constructors.
     edges = np.asarray(values, dtype=float)
     if edges.shape != (cell_count + 1,):
         raise ValueError(f"{name} must have length {cell_count + 1}")
@@ -639,11 +712,15 @@ def _resolve_freqs(
     freqs: Sequence[float] | None,
     wavelength: float | Sequence[float] | None,
 ) -> tuple[float, ...]:
+    """Resolve exactly one frequency or wavelength input into frequencies."""
+    # Accept either frequencies or wavelengths, never both, so the solve axis is
+    # unambiguous.
     if (freqs is None) == (wavelength is None):
         raise ValueError("provide exactly one of freqs or wavelength")
     if freqs is not None:
         values = tuple(float(freq) for freq in freqs)
     else:
+        # Wavelengths are in microns because C_0 is stored in um/s.
         wavelengths = np.asarray(wavelength, dtype=float).reshape(-1)
         values = tuple(float(C_0 / value) for value in wavelengths)
     if not values or any(not np.isfinite(freq) or freq <= 0 for freq in values):
@@ -652,12 +729,17 @@ def _resolve_freqs(
 
 
 def _dual_steps(primal_steps: np.ndarray) -> np.ndarray:
+    """Return backward-grid step sizes from primal cell widths."""
+    # Interior backward steps live halfway between adjacent primal cells.
     if len(primal_steps) == 1:
         return primal_steps.copy()
     return np.hstack((primal_steps[0], (primal_steps[:-1] + primal_steps[1:]) / 2))
 
 
 def _fields_to_grid(fields: list[np.ndarray], shape: tuple[int, int]) -> dict[str, np.ndarray]:
+    """Reshape flattened solver fields into x/y/mode arrays."""
+    # scipy_reference returns [mode, flattened_cell]; public results use
+    # [x, y, mode] per component.
     nx, ny = shape
     mode_count = fields[0].shape[0]
     out = {}
@@ -670,7 +752,7 @@ def _fields_to_grid(fields: list[np.ndarray], shape: tuple[int, int]) -> dict[st
 def _local_fields_to_global(fields: dict[str, np.ndarray], *, normal_axis: int) -> dict[str, np.ndarray]:
     """Map solver-local field components onto global x/y/z component names.
 
-    The Rust kernels solve in local coordinates where local z is the
+    The SciPy solver uses local coordinates where local z is the
     propagation-normal axis. For x- or y-normal planes, component labels must be
     permuted back to global coordinates before returning a Result.
     """
@@ -678,6 +760,8 @@ def _local_fields_to_global(fields: dict[str, np.ndarray], *, normal_axis: int) 
     axis_names = ("x", "y", "z")
     if normal_axis not in {0, 1, 2}:
         raise ValueError("normal_axis must be 0, 1, or 2")
+
+    # Local solver axes are always tangential-x, tangential-y, normal-z.
     local_to_global = (*(axis for axis in range(3) if axis != normal_axis), normal_axis)
     out: dict[str, np.ndarray] = {}
     for prefix in ("E", "H"):
@@ -701,12 +785,19 @@ def _field_data_arrays(
     normal_axis: int,
     normal_coordinate: float,
 ) -> dict[str, xr.DataArray]:
+    """Wrap solved field arrays in coordinate-aware xarray objects."""
     axis_names = ("x", "y", "z")
     if normal_axis not in {0, 1, 2}:
         raise ValueError("normal_axis must be 0, 1, or 2")
+
+    # Determine which two global coordinates correspond to the solver's local
+    # x/y plane.
     tangential = tuple(axis for axis in range(3) if axis != normal_axis)
     coord0 = (x_edges[:-1] + x_edges[1:]) / 2
     coord1 = (y_edges[:-1] + y_edges[1:]) / 2
+
+    # Store width coordinates beside center coordinates so integrations can use
+    # physical cell areas without reconstructing the original edges.
     coords = {
         axis_names[tangential[0]]: coord0,
         f"{axis_names[tangential[0]]}_width": (axis_names[tangential[0]], np.diff(x_edges)),
@@ -726,6 +817,8 @@ def _field_data_arrays(
     )
     out = {}
     for component, rows in fields_by_component.items():
+        # Stack frequencies on axis 2, then insert the singleton normal axis so
+        # every component has x/y/z/f/mode_index dimensions.
         values = np.stack(rows, axis=2)[:, :, None, :, :]
         component_coords = dict(coords)
         component_coords["mode_index"] = np.arange(values.shape[-1])
@@ -739,16 +832,24 @@ def _field_data_arrays(
 
 
 def _default_initial_vector(size: int, shape: tuple[int, int] | None = None) -> np.ndarray:
+    """Build a deterministic ARPACK seed vector for reproducible solves."""
+    # When grid shape is known, build a seed with the same flattened cell order
+    # as the solver state vector.
     if shape is not None and size % (shape[0] * shape[1]) == 0:
         nx, ny = shape
         multiplier = size // (nx * ny)
         rng = np.random.default_rng(0)
         vector = rng.random((nx, ny, multiplier)) + 1j * rng.random((nx, ny, multiplier))
+
+        # Zero low-edge rows when possible so the initial guess is compatible
+        # with symmetry-wall derivative stencils.
         if nx > 1:
             vector[0, :, :] = 0
         if ny > 1:
             vector[:, 0, :] = 0
         stacked = np.concatenate(tuple(vector[ix, :, :] for ix in range(nx)), axis=0)
         return stacked.flatten("F")
+
+    # Fallback for callers that only know the operator size.
     index = np.arange(1, size + 1, dtype=float)
     return np.sin(0.37 * index) + 1j * np.cos(0.53 * index)

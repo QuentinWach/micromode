@@ -23,9 +23,7 @@ Run these before tagging:
 
 ```bash
 uv sync --all-extras
-env -u CONDA_PREFIX uv run maturin develop
 uv run pytest --cov=micromode --cov-report=xml --cov-report=term-missing
-cargo test
 uv build
 uv run twine check dist/*
 ./scripts/smoke_dist.sh
@@ -58,14 +56,14 @@ python -m venv /tmp/micromode-testpypi
 ## PyPI Release
 
 1. Update `CHANGELOG.md`.
-2. Confirm `pyproject.toml`, `Cargo.toml`, and `CHANGELOG.md` all use the
-   same new release version. PyPI filenames are immutable, so never reuse a
-   version that has reached PyPI.
+2. Confirm `pyproject.toml` and `CHANGELOG.md` both use the same new release
+   version. PyPI filenames are immutable, so never reuse a version that has
+   reached PyPI.
 3. Commit the release changes.
 4. Tag the release with the same version from `pyproject.toml`:
 
 ```bash
-git tag v0.1.0a3
+git tag v$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
 git push origin main --tags
 ```
 
@@ -74,5 +72,5 @@ checks metadata, and publishes to PyPI using Trusted Publishing.
 
 ## Current Wheel Scope
 
-The release workflow builds Linux, macOS, and Windows wheels for Python 3.10
-through 3.13.
+The release workflow builds a pure-Python wheel and source distribution for
+Python 3.10 through 3.13.

@@ -18,10 +18,11 @@ Run the local raster solver against every fixture that has enough neutral metada
 the mode plane:
 
 ```bash
-uv run python benchmarks/compare_mode_solver_fixtures.py --suite extended --run-local --report-json tmp/reference_fixture_validation_rust_sparse.json
+uv run python benchmarks/compare_mode_solver_fixtures.py \
+  --suite extended \
+  --run-local \
+  --report-json tmp/reference_fixture_validation_scipy.json
 ```
-
-Local fixture validation uses the Rust sparse backend.
 
 Local validation reports each case as `pass`, `fail`, or `unsupported`. `fail` means the local
 solver ran but exceeded the fixture tolerance; `unsupported` means the case is explicitly classified
@@ -52,13 +53,13 @@ waveguides, cubic and polynomial interpolation, and non-default mode sorting met
 angle-plus-bend transforms still need a validated tensorial reference run before a fixture is
 committed.
 
-## Backend Timing
+## Solver Timing
 
-Use the backend benchmark to track solve time and sparse-operator diagnostics across grid sizes:
+Use the solver benchmark to track solve time and sparse-operator diagnostics across grid sizes:
 
 ```bash
-uv run python benchmarks/micromode_backend_benchmark.py --grid 20x14 --grid 32x22
+uv run python benchmarks/micromode_solver_benchmark.py --grid 20x14 --grid 32x22
 ```
 
-The benchmark uses MicroMode directly, writes JSON to `tmp/` by default, and records backend name,
+The benchmark uses MicroMode directly, writes JSON to `tmp/` by default, and records solver name,
 operator size, nonzero count, residuals, elapsed time, and solved effective indices.

@@ -1,3 +1,5 @@
+"""Sweep SOI ridge width and visualize mode hybridization."""
+
 from __future__ import annotations
 
 import argparse
@@ -23,6 +25,7 @@ MODE_COLORS = ("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#56B4E9", "#E69F00")
 
 
 def publication_style() -> dict[str, object]:
+    """Return matplotlib rcParams for generated example figures."""
     return {
         "font.family": "DejaVu Sans",
         "font.size": 9,
@@ -43,6 +46,7 @@ def publication_style() -> dict[str, object]:
 
 
 def main() -> None:
+    """Run the example script from parsed command-line options."""
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     widths = np.arange(args.width_start, args.width_stop + 0.5 * args.width_step, args.width_step)
@@ -74,13 +78,16 @@ def main() -> None:
     sweep = mm.Sweep(values=widths, results=sorted_results, parameter_name="width_um")
     summary = write_summary(args.output_dir / "summary.json", sweep, args)
     plot_sweep(args.output_dir / "hybridization_sweep.png", sweep)
+    plot_te_fraction(args.output_dir / "hybridization_te_fraction.png", sweep)
     plot_profiles(args.output_dir / "hybridization_profiles.png", widths, sorted_results, eps_grids)
     print(f"Wrote {args.output_dir / 'hybridization_sweep.png'}")
+    print(f"Wrote {args.output_dir / 'hybridization_te_fraction.png'}")
     print(f"Wrote {args.output_dir / 'hybridization_profiles.png'}")
     print(f"Wrote {summary}")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the example script."""
     parser = argparse.ArgumentParser(description="Run a MicroMode SOI mode-hybridization sweep.")
     parser.add_argument(
         "--output-dir",
@@ -103,6 +110,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def centered_edges(width: float, step: float) -> np.ndarray:
+    """Return evenly spaced cell edges centered on zero."""
     half_cells = int(np.ceil(width / (2 * step)))
     return np.arange(-half_cells, half_cells + 1, dtype=float) * step
 
@@ -114,6 +122,7 @@ def soi_ridge_materials(
     y_edges: np.ndarray,
     film_thickness: float,
 ) -> tuple[mm.Materials, np.ndarray]:
+    """Rasterize an SOI ridge for a requested top width."""
     x = 0.5 * (x_edges[:-1] + x_edges[1:])
     y = 0.5 * (y_edges[:-1] + y_edges[1:])
     _xx, yy = np.meshgrid(x, y, indexing="ij")
@@ -139,12 +148,14 @@ def rectangle_fill_fraction(
     y_min: float,
     y_max: float,
 ) -> np.ndarray:
+    """Compute cell fill fractions for a rectangle."""
     x_overlap = interval_fill_fraction(x_edges, x_min, x_max)
     y_overlap = interval_fill_fraction(y_edges, y_min, y_max)
     return np.outer(x_overlap, y_overlap)
 
 
 def interval_fill_fraction(edges: np.ndarray, lower: float, upper: float) -> np.ndarray:
+    """Compute one-dimensional interval overlap fractions."""
     cell_lower = edges[:-1]
     cell_upper = edges[1:]
     overlap = np.clip(np.minimum(cell_upper, upper) - np.maximum(cell_lower, lower), 0.0, None)
@@ -153,6 +164,7 @@ def interval_fill_fraction(edges: np.ndarray, lower: float, upper: float) -> np.
 
 
 def write_summary(path: Path, sweep: mm.Sweep, args: argparse.Namespace) -> Path:
+    """Write a JSON summary of the sweep result."""
     payload = {
         "wavelength_um": WAVELENGTH_UM,
         "n_si": N_SI,
@@ -195,56 +207,61 @@ def sort_result_by_neff(result: mm.Result) -> mm.Result:
 
 
 def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
-    pol = sweep.pol_fraction
+    """Plot effective index across the width sweep."""
     with plt.rc_context(publication_style()):
-        fig, axes = plt.subplots(
-            1,
-            2,
-            figsize=(7.2, 3.0),
-            constrained_layout=True,
-            gridspec_kw={"width_ratios": (1.08, 1.0)},
-        )
+        fig, ax = plt.subplots(figsize=(4.2, 3.0), constrained_layout=True)
         colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
         plotted_modes = list(range(min(4, sweep.num_modes)))
         line_width = 2.025
 
         for mode_index in plotted_modes:
             x_smooth, y_smooth = smooth_line(sweep.values, sweep.n_eff[:, mode_index])
-            axes[0].plot(
+            ax.plot(
                 x_smooth,
                 y_smooth,
                 color=colors[mode_index],
                 linewidth=line_width,
                 label=f"mode {mode_index}",
             )
-        axes[0].set_xlabel("ridge width (um)")
-        axes[0].set_ylabel("effective index")
-        axes[0].grid(color="#d9dde3", linewidth=0.55)
-        axes[0].legend(ncol=2, frameon=False, handlelength=1.8, columnspacing=1.1)
+        ax.set_xlabel("ridge width (um)")
+        ax.set_ylabel("effective index")
+        ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
+        ax.margins(x=0)
+        ax.grid(color="#d9dde3", linewidth=0.55)
+        ax.legend(ncol=2, frameon=False, handlelength=1.8, columnspacing=1.1)
 
+        save_figure(fig, path)
+        plt.close(fig)
+
+
+def plot_te_fraction(path: Path, sweep: mm.Sweep) -> None:
+    """Plot TE fraction across the width sweep."""
+    pol = sweep.pol_fraction
+    with plt.rc_context(publication_style()):
+        fig, ax = plt.subplots(figsize=(4.2, 3.0), constrained_layout=True)
+        colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
+        line_width = 2.025
         highlighted = [index for index in (0, 1, 2, 3) if index < sweep.num_modes]
         if not highlighted:
             highlighted = [0]
         for mode_index in highlighted:
             x_smooth, y_smooth = smooth_line(sweep.values, pol["te"][:, mode_index], y_limits=(0.0, 1.0))
-            axes[1].plot(
+            ax.plot(
                 x_smooth,
                 y_smooth,
                 linewidth=line_width,
                 color=colors[mode_index],
                 label=f"mode {mode_index}",
             )
-        axes[1].set_xlabel("ridge width (um)")
-        axes[1].set_ylabel("TE fraction")
-        axes[1].set_ylim(-0.04, 1.04)
-        axes[1].grid(color="#d9dde3", linewidth=0.55)
-
-        for ax in axes:
-            ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
-            ax.margins(x=0)
+        ax.set_xlabel("ridge width (um)")
+        ax.set_ylabel("TE fraction")
+        ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
+        ax.set_ylim(-0.04, 1.04)
+        ax.margins(x=0)
+        ax.grid(color="#d9dde3", linewidth=0.55)
 
         mode_handles = [Line2D([0], [0], color=colors[index], lw=2.4) for index in highlighted]
-        axes[1].legend(
+        ax.legend(
             mode_handles,
             [f"mode {index}" for index in highlighted],
             frameon=False,
@@ -292,6 +309,7 @@ def smooth_line(
 
 
 def pchip_slopes(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Compute monotone cubic Hermite slopes."""
     h = np.diff(x)
     delta = np.diff(y) / h
     slopes = np.zeros_like(y)
@@ -310,6 +328,7 @@ def pchip_slopes(x: np.ndarray, y: np.ndarray) -> np.ndarray:
 
 
 def pchip_endpoint_slope(h0: float, h1: float, delta0: float, delta1: float) -> float:
+    """Compute a shape-preserving endpoint slope."""
     slope = ((2.0 * h0 + h1) * delta0 - h0 * delta1) / (h0 + h1)
     if np.sign(slope) != np.sign(delta0):
         return 0.0
@@ -319,6 +338,7 @@ def pchip_endpoint_slope(h0: float, h1: float, delta0: float, delta1: float) -> 
 
 
 def evaluate_hermite(x: np.ndarray, y: np.ndarray, slopes: np.ndarray, x_dense: np.ndarray) -> np.ndarray:
+    """Evaluate cubic Hermite segments on a dense grid."""
     interval_indices = np.searchsorted(x, x_dense, side="right") - 1
     interval_indices = np.clip(interval_indices, 0, len(x) - 2)
     x0 = x[interval_indices]
@@ -337,6 +357,7 @@ def evaluate_hermite(x: np.ndarray, y: np.ndarray, slopes: np.ndarray, x_dense: 
 
 
 def plot_profiles(path: Path, widths: np.ndarray, results: tuple[mm.Result, ...], eps_grids: list[np.ndarray]) -> None:
+    """Plot selected field profiles from a sweep."""
     selected_indices = unique_nearest_indices(widths, [0.5, 1.0, 2.0])
     rows = len(selected_indices)
     columns = ("index", "mode0_abs", "mode0_ex", "mode1_abs", "mode1_ex")
@@ -422,6 +443,7 @@ def plot_profiles(path: Path, widths: np.ndarray, results: tuple[mm.Result, ...]
 
 
 def unique_nearest_indices(values: np.ndarray, targets: list[float]) -> list[int]:
+    """Return unique indices nearest requested target values."""
     indices = []
     for target in targets:
         index = int(np.argmin(np.abs(values - target)))
@@ -435,6 +457,7 @@ def component_image(
     component: str,
     mode_index: int,
 ) -> tuple[tuple[str, str], tuple[np.ndarray, np.ndarray], np.ndarray]:
+    """Extract one field component image for plotting."""
     image = result.field_components[component].isel(f=0, mode_index=mode_index).squeeze(drop=True)
     spatial_dims = tuple(dim for dim in ("x", "y", "z") if dim in image.dims and image.sizes[dim] > 1)
     if len(spatial_dims) != 2:
@@ -448,6 +471,7 @@ def electric_magnitude_image(
     result: mm.Result,
     mode_index: int,
 ) -> tuple[tuple[str, str], tuple[np.ndarray, np.ndarray], np.ndarray]:
+    """Compute electric-field magnitude for one mode image."""
     dims, coords, ex = component_image(result, "Ex", mode_index)
     magnitude_squared = np.abs(ex) ** 2
     for component in ("Ey", "Ez"):
@@ -470,6 +494,7 @@ def draw_image(
     value_limits: tuple[float, float] | None = None,
     interpolation: str = "nearest",
 ):
+    """Draw a field image on an axes object with consistent scaling."""
     x, y = coords
     dx = float(np.median(np.diff(x))) if len(x) > 1 else 1.0
     dy = float(np.median(np.diff(y))) if len(y) > 1 else 1.0
@@ -495,18 +520,21 @@ def draw_image(
 
 
 def normalize_positive(values: np.ndarray) -> np.ndarray:
+    """Normalize nonnegative image data to unit peak magnitude."""
     values = np.asarray(values, dtype=float)
     scale = max(float(np.nanmax(np.abs(values))), np.finfo(float).eps)
     return values / scale
 
 
 def normalize_signed(values: np.ndarray) -> np.ndarray:
+    """Normalize signed field data to unit peak magnitude."""
     values = np.asarray(values, dtype=float)
     scale = max(float(np.nanmax(np.abs(values))), np.finfo(float).eps)
     return values / scale
 
 
 def plot_eps_contours(ax, coords: tuple[np.ndarray, np.ndarray], eps: np.ndarray) -> None:
+    """Overlay material-index contours on a field plot."""
     values = np.asarray(eps.real, dtype=float)
     if np.nanmax(values) - np.nanmin(values) < 1e-12:
         return
@@ -517,6 +545,7 @@ def plot_eps_contours(ax, coords: tuple[np.ndarray, np.ndarray], eps: np.ndarray
 
 
 def save_figure(fig, path: Path) -> None:
+    """Write a figure to disk and close it."""
     fig.savefig(path)
     fig.savefig(path.with_suffix(".pdf"))
     fig.savefig(path.with_suffix(".svg"))

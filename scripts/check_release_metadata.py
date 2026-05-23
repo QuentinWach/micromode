@@ -16,28 +16,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
+    """Validate release metadata and workflow expectations."""
     pyproject = load_toml("pyproject.toml")
-    cargo = load_toml("Cargo.toml")
     project = pyproject["project"]
-    package = cargo["package"]
     publish_workflow = (ROOT / ".github/workflows/publish.yml").read_text(encoding="utf-8")
 
     require(project["name"] == "micromode", "Python package name must be micromode")
     require(project["version"] != "0.0.0", "Python package version must not be 0.0.0")
-    require(
-        package["version"] == python_to_cargo_version(project["version"]),
-        "Rust crate version must match the Python package version",
-    )
     require(project["requires-python"] == ">=3.10,<3.14", "Python support must match the release wheel matrix")
-    require(package["version"] != "0.0.0", "Rust crate version must not be 0.0.0")
     require(project["license"] == "Apache-2.0", "Python package license must be Apache-2.0")
-    require(package["license"] == "Apache-2.0", "Rust crate license must be Apache-2.0")
     require((ROOT / "LICENSE").exists(), "LICENSE file is missing")
     require((ROOT / "CHANGELOG.md").exists(), "CHANGELOG.md is missing")
     require(project.get("authors"), "project.authors is missing")
     require(project.get("classifiers"), "project.classifiers is missing")
     require(project.get("urls"), "project.urls is missing")
-    require(package.get("repository"), "Cargo repository is missing")
     require((ROOT / ".github/workflows/publish.yml").exists(), "publish workflow is missing")
     require((ROOT / ".github/workflows/tests.yml").exists(), "tests workflow is missing")
     require((ROOT / "scripts/smoke_wheel.py").exists(), "wheel smoke test is missing")
@@ -46,13 +38,7 @@ def main() -> None:
             f'"{version}"' in publish_workflow,
             f"publish workflow is missing a Python {version} wheel build",
         )
-    require("--compatibility pypi" in publish_workflow, "publish workflow must request PyPI-compatible wheels")
-    require("--auditwheel repair" in publish_workflow, "Linux release wheels must be auditwheel-repaired")
-    require("windows-latest" in publish_workflow, "publish workflow is missing Windows wheel builds")
-    require(
-        "--require-platform macosx manylinux win" in publish_workflow,
-        "release artifact check must require macOS, manylinux, and Windows wheels",
-    )
+    require("--allow-pure-python" in publish_workflow, "release artifact check must allow pure-Python wheels")
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     require(project["version"] in changelog, "Python version is not mentioned in CHANGELOG.md")
@@ -63,22 +49,13 @@ def main() -> None:
 
 
 def load_toml(path: str) -> dict:
+    """Load a TOML file relative to the repository root."""
     with (ROOT / path).open("rb") as handle:
         return tomllib.load(handle)
 
 
-def python_to_cargo_version(version: str) -> str:
-    match = re.fullmatch(r"(\d+\.\d+\.\d+)(?:(a|b|rc)(\d+))?", version)
-    if match is None:
-        raise ValueError(f"Python version {version!r} is not a supported release version")
-    base, phase, number = match.groups()
-    if phase is None:
-        return base
-    phase_names = {"a": "alpha", "b": "beta", "rc": "rc"}
-    return f"{base}-{phase_names[phase]}.{number}"
-
-
 def require_tag_matches_version(version: str) -> None:
+    """Ensure a tag-triggered workflow uses the package version."""
     if os.environ.get("GITHUB_REF_TYPE") != "tag":
         return
 
@@ -87,6 +64,7 @@ def require_tag_matches_version(version: str) -> None:
 
 
 def require(condition: bool, message: str) -> None:
+    """Raise SystemExit with a message when a condition is false."""
     if not condition:
         raise SystemExit(message)
 

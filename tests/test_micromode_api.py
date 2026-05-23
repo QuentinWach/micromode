@@ -1,3 +1,5 @@
+"""Integration-style tests for the public MicroMode API."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -11,20 +13,24 @@ import micromode as mm
 
 
 def _linspace_edges(start: float, stop: float, count: int) -> tuple[float, ...]:
+    """Return linspace edges used by tests."""
     return tuple(float(value) for value in np.linspace(start, stop, count))
 
 
 def _edge_centers(edges: Sequence[float]) -> np.ndarray:
+    """Return edge centers used by tests."""
     edge_array = np.asarray(edges, dtype=float)
     return (edge_array[:-1] + edge_array[1:]) / 2
 
 
 def _solver_info(data: mm.Result) -> dict[str, Any]:
+    """Return solver info used by tests."""
     assert data.solver_info is not None
     return data.solver_info
 
 
 def _strip_grid(nx: int = 5, ny: int = 4) -> tuple[np.ndarray, tuple[float, ...], tuple[float, ...]]:
+    """Return strip grid used by tests."""
     x_edges = _linspace_edges(-1.0, 1.0, nx + 1)
     y_edges = _linspace_edges(-0.8, 0.8, ny + 1)
     x_centers = _edge_centers(x_edges)
@@ -34,7 +40,8 @@ def _strip_grid(nx: int = 5, ny: int = 4) -> tuple[np.ndarray, tuple[float, ...]
     return eps, x_edges, y_edges
 
 
-def test_grid_api_solves_with_rust_sparse_backend():
+def test_grid_api_solves_with_scipy_solver():
+    """Verify grid api solves with scipy solver."""
     eps, x_edges, y_edges = _strip_grid(6, 5)
     freq = mm.C_0 / 1.55
 
@@ -53,6 +60,8 @@ def test_grid_api_solves_with_rust_sparse_backend():
     assert data.field_components["Ex"].shape == (6, 5, 1, 1, 2)
     assert set(data.field_components) == {"Ex", "Ey", "Ez", "Hx", "Hy", "Hz"}
     run_info = _solver_info(data)["runs"][0]
+    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
     assert run_info["phase_convention"] == "dominant_e_real_positive"
     assert run_info["normalization"] == "lorentz_orthogonal_unit_transverse_power"
     np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
@@ -68,7 +77,28 @@ def test_grid_api_solves_with_rust_sparse_backend():
     assert abs(anchor.imag) <= 1e-10 * max(abs(anchor), 1.0)
 
 
+def test_scipy_solver_reports_operator_diagnostics():
+    """Verify scipy solver reports operator diagnostics."""
+    eps, x_edges, y_edges = _strip_grid(5, 4)
+
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        wavelength=1.55,
+        num_modes=1,
+        target_neff=2.5,
+        krylov_dim=16,
+    )
+
+    run_info = _solver_info(data)["runs"][0]
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
+    assert run_info["operator_size"] == 2 * eps.size
+    assert run_info["operator_nnz"] > run_info["operator_size"]
+
+
 def test_materials_api_matches_component_api_for_diagonal_grid():
+    """Verify materials api matches component api for diagonal grid."""
     eps, x_edges, y_edges = _strip_grid()
     freq = mm.C_0 / 1.55
     materials = mm.Materials.from_diagonal(eps_xx=eps, x_edges=x_edges, y_edges=y_edges)
@@ -94,7 +124,93 @@ def test_materials_api_matches_component_api_for_diagonal_grid():
     assert from_materials.field_components["Ex"].shape == (5, 4, 1, 1, 2)
 
 
+def test_scipy_solver_handles_diagonal_grid():
+    """Verify scipy solver handles diagonal grid."""
+    eps, x_edges, y_edges = _strip_grid(5, 4)
+    freq = mm.C_0 / 1.55
+
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        freqs=[freq],
+        num_modes=2,
+        target_neff=2.5,
+        krylov_dim=18,
+    )
+
+    run_info = _solver_info(data)["runs"][0]
+    assert _solver_info(data)["backend"] == "scipy_arpack_reference"
+    assert run_info["backend_kind"] == "diagonal_scipy_reference"
+    assert run_info["operator_size"] == 2 * eps.size
+    assert run_info["operator_nnz"] > run_info["operator_size"]
+    np.testing.assert_allclose(run_info["power_norms"], np.ones(2), rtol=1e-10, atol=1e-10)
+    assert run_info["lorentz_orthogonality_error"] < 1e-8
+
+
+def test_scipy_solver_handles_pml_and_tensorial_paths():
+    """Verify scipy solver handles pml and tensorial paths."""
+    eps, x_edges, y_edges = _strip_grid(4, 3)
+
+    pml_common = {
+        "eps_xx": eps,
+        "x_edges": x_edges,
+        "y_edges": y_edges,
+        "freqs": [mm.C_0 / 1.55],
+        "num_modes": 1,
+        "target_neff": 2.5,
+        "pml": (1, 0),
+        "krylov_dim": 18,
+    }
+    pml_data = mm.solve_grid(**pml_common)
+
+    pml_run = _solver_info(pml_data)["runs"][0]
+    assert pml_run["backend_kind"] == "diagonal_scipy_reference"
+    assert pml_run["operator_size"] == 2 * eps.size
+    assert pml_run["operator_nnz"] > pml_run["operator_size"]
+
+    tensor_common = {
+        "eps_xx": eps,
+        "eps_yy": np.full_like(eps, 2.2**2),
+        "eps_zz": np.full_like(eps, 2.0**2),
+        "eps_xz": np.full_like(eps, 0.01),
+        "eps_zx": np.full_like(eps, 0.01),
+        "x_edges": x_edges,
+        "y_edges": y_edges,
+        "freqs": [mm.C_0 / 1.55],
+        "num_modes": 1,
+        "target_neff": 2.2,
+        "krylov_dim": 20,
+    }
+    tensor_data = mm.solve_grid(**tensor_common)
+
+    tensor_run = _solver_info(tensor_data)["runs"][0]
+    assert tensor_run["backend_kind"] == "tensorial_scipy_reference"
+    assert tensor_run["operator_size"] == 4 * eps.size
+    assert tensor_run["operator_nnz"] > tensor_run["operator_size"]
+
+
+def test_scipy_solver_handles_transformed_grid():
+    """Verify scipy solver handles transformed grid."""
+    eps, x_edges, y_edges = _strip_grid(4, 3)
+
+    data = mm.solve_grid(
+        eps_xx=eps,
+        x_edges=x_edges,
+        y_edges=y_edges,
+        freqs=[mm.C_0 / 1.55],
+        num_modes=1,
+        target_neff=2.5,
+        angle_theta=0.08,
+        angle_phi=0.25,
+        krylov_dim=20,
+    )
+
+    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_scipy_reference"
+
+
 def test_materials_api_accepts_full_tensor_grid():
+    """Verify materials api accepts full tensor grid."""
     x_edges = _linspace_edges(-1.0, 1.0, 5)
     y_edges = _linspace_edges(-0.8, 0.8, 4)
     shape = (len(x_edges) - 1, len(y_edges) - 1)
@@ -128,6 +244,7 @@ def test_materials_api_accepts_full_tensor_grid():
 
 
 def test_solver_specs_report_diagnostics_and_persist_to_hdf5(tmp_path):
+    """Verify solver specs report diagnostics and persist to hdf5."""
     eps, x_edges, y_edges = _strip_grid(6, 5)
     pml = mm.PmlSpec(num_cells=(1, 1), sigma_max=1.6, kappa_min=1.0, kappa_max=2.2, order=2)
     boundary = mm.BoundarySpec(low=("pec", "pmc"))
@@ -164,6 +281,7 @@ def test_solver_specs_report_diagnostics_and_persist_to_hdf5(tmp_path):
 
 
 def test_slice_api_solves_1d_x_slice_and_matches_single_cell_grid(tmp_path):
+    """Verify slice api solves 1d x slice and matches single cell grid."""
     x_edges = _linspace_edges(-1.0, 1.0, 9)
     x_centers = _edge_centers(x_edges)
     eps = np.where(np.abs(x_centers) <= 0.3, 3.4**2, 1.44**2)
@@ -211,6 +329,7 @@ def test_slice_api_solves_1d_x_slice_and_matches_single_cell_grid(tmp_path):
 
 
 def test_materials_slice_api_supports_y_axis_and_tensor_components():
+    """Verify materials slice api supports y axis and tensor components."""
     y_edges = _linspace_edges(-0.8, 0.8, 7)
     shape = (len(y_edges) - 1,)
     eps_xx = np.full(shape, 2.2**2)
@@ -244,6 +363,7 @@ def test_materials_slice_api_supports_y_axis_and_tensor_components():
 
 
 def test_y_normal_solve_returns_global_component_names():
+    """Verify y normal solve returns global component names."""
     z_edges = _linspace_edges(-1.0, 1.0, 9)
     z_centers = _edge_centers(z_edges)
     eps = np.where(np.abs(z_centers) <= 0.3, 3.4**2, 1.44**2)
@@ -269,6 +389,7 @@ def test_y_normal_solve_returns_global_component_names():
 
 
 def test_x_normal_solve_returns_global_component_names_and_positive_power():
+    """Verify x normal solve returns global component names and positive power."""
     y_edges = _linspace_edges(-1.0, 1.0, 7)
     z_edges = _linspace_edges(-0.8, 0.8, 6)
     y_centers = _edge_centers(y_edges)
@@ -298,6 +419,7 @@ def test_x_normal_solve_returns_global_component_names_and_positive_power():
 
 
 def test_y_normal_power_overlap_is_positive():
+    """Verify y normal power overlap is positive."""
     z_edges = _linspace_edges(-1.0, 1.0, 9)
     z_centers = _edge_centers(z_edges)
     eps = np.where(np.abs(z_centers) <= 0.3, 3.4**2, 1.44**2)
@@ -320,6 +442,7 @@ def test_y_normal_power_overlap_is_positive():
 
 
 def test_materials_subpixel_averaging_helpers():
+    """Verify materials subpixel averaging helpers."""
     x_edges = _linspace_edges(-1.0, 1.0, 3)
     y_edges = _linspace_edges(-0.5, 0.5, 3)
     samples = np.asarray(
@@ -352,7 +475,8 @@ def test_materials_subpixel_averaging_helpers():
     assert materials.shape == (2, 2)
 
 
-def test_angle_and_bend_use_tensorial_rust_path():
+def test_angle_and_bend_use_tensorial_path():
+    """Verify angle and bend use tensorial path."""
     eps, x_edges, y_edges = _strip_grid()
 
     data = mm.solve_grid(
@@ -375,6 +499,7 @@ def test_angle_and_bend_use_tensorial_rust_path():
 
 
 def test_full_tensor_grid_supports_angle_and_bend_transform():
+    """Verify full tensor grid supports angle and bend transform."""
     x_edges = _linspace_edges(-1.0, 1.0, 5)
     y_edges = _linspace_edges(-0.8, 0.8, 4)
     shape = (len(x_edges) - 1, len(y_edges) - 1)
@@ -400,12 +525,13 @@ def test_full_tensor_grid_supports_angle_and_bend_transform():
         krylov_dim=18,
     )
 
-    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_sparse"
+    assert _solver_info(data)["runs"][0]["backend_kind"] == "tensorial_scipy_reference"
     assert np.isfinite(data.n_complex.values).all()
     assert np.isfinite(data.field_components["Ex"].values).all()
 
 
 def test_spec_can_drive_grid_solve_options():
+    """Verify spec can drive grid solve options."""
     eps, x_edges, y_edges = _strip_grid()
     spec = mm.Spec(num_modes=1, target_neff=2.5)
 
@@ -423,6 +549,7 @@ def test_spec_can_drive_grid_solve_options():
 
 
 def test_result_metrics_io_plotting_and_overlap(tmp_path):
+    """Verify result metrics io plotting and overlap."""
     eps, x_edges, y_edges = _strip_grid(6, 5)
     data = mm.solve_grid(
         eps_xx=eps,
@@ -465,6 +592,7 @@ def test_result_metrics_io_plotting_and_overlap(tmp_path):
 
 
 def test_result_from_hdf5_accepts_bytes_solver_info(tmp_path):
+    """Verify result from hdf5 accepts bytes solver info."""
     eps, x_edges, y_edges = _strip_grid(6, 5)
     data = mm.solve_grid(
         eps_xx=eps,
@@ -486,6 +614,7 @@ def test_result_from_hdf5_accepts_bytes_solver_info(tmp_path):
 
 
 def test_result_overlap_for_synthetic_orthogonal_modes():
+    """Verify result overlap for synthetic orthogonal modes."""
     dims = ("x", "y", "z", "f", "mode_index")
     coords = {
         "x": np.asarray([-0.5, 0.5]),
@@ -519,6 +648,7 @@ def test_result_overlap_for_synthetic_orthogonal_modes():
 
 
 def test_sweep_tracks_modes_by_overlap():
+    """Verify sweep tracks modes by overlap."""
     dims = ("x", "y", "z", "f", "mode_index")
     coords = {
         "x": np.asarray([-0.5, 0.5]),
@@ -530,10 +660,12 @@ def test_sweep_tracks_modes_by_overlap():
     shape = (2, 2, 1, 1, 2)
 
     def result(n_values: list[float], order: tuple[str, str]) -> mm.Result:
+        """Return result used by tests."""
         fields = {component: np.zeros(shape, dtype=np.complex128) for component in ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")}
         for mode_index, component in enumerate(order):
             fields[component][..., mode_index] = 1.0
         arrays = {component: xr.DataArray(values, dims=dims, coords=coords) for component, values in fields.items()}
+        solver_info = {"backend": "synthetic", "n_values": n_values}
         return mm.Result(
             n_complex=xr.DataArray(
                 [np.asarray(n_values, dtype=np.complex128)],
@@ -541,6 +673,7 @@ def test_sweep_tracks_modes_by_overlap():
                 coords={"f": coords["f"], "mode_index": coords["mode_index"]},
             ),
             field_components=arrays,
+            solver_info=solver_info,
         )
 
     first = result([2.2, 1.9], ("Ex", "Ey"))
@@ -550,11 +683,13 @@ def test_sweep_tracks_modes_by_overlap():
     sweep = mm.Sweep(values=np.asarray([0.4, 0.5]), results=tracked, parameter_name="width")
 
     np.testing.assert_allclose(tracked[1].n_complex.values, [[2.18, 1.91]])
+    assert tracked[1].solver_info == {"backend": "synthetic", "n_values": [1.91, 2.18]}
     np.testing.assert_allclose(sweep.n_eff[:, 0], [2.2, 2.18])
     assert {"width", "mode_index", "n_eff", "te_fraction"} <= set(sweep.to_dataframe().columns)
 
 
 def test_spec_validation_for_core_options():
+    """Verify spec validation for core options."""
     spec = mm.Spec(
         num_modes=2,
         target_neff=2.0,
@@ -579,3 +714,7 @@ def test_spec_validation_for_core_options():
         mm.Spec(num_modes=0)
     with pytest.raises(ValueError, match="bend_axis"):
         mm.Spec(bend_radius=5.0)
+    with pytest.raises(ValueError, match="num_cells"):
+        mm.PmlSpec(num_cells=(1.5, 0))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="order"):
+        mm.PmlSpec(order=2.5)  # type: ignore[arg-type]
