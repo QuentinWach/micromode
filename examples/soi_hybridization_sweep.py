@@ -74,8 +74,10 @@ def main() -> None:
     sweep = mm.Sweep(values=widths, results=sorted_results, parameter_name="width_um")
     summary = write_summary(args.output_dir / "summary.json", sweep, args)
     plot_sweep(args.output_dir / "hybridization_sweep.png", sweep)
+    plot_te_fraction(args.output_dir / "hybridization_te_fraction.png", sweep)
     plot_profiles(args.output_dir / "hybridization_profiles.png", widths, sorted_results, eps_grids)
     print(f"Wrote {args.output_dir / 'hybridization_sweep.png'}")
+    print(f"Wrote {args.output_dir / 'hybridization_te_fraction.png'}")
     print(f"Wrote {args.output_dir / 'hybridization_profiles.png'}")
     print(f"Wrote {summary}")
 
@@ -195,56 +197,59 @@ def sort_result_by_neff(result: mm.Result) -> mm.Result:
 
 
 def plot_sweep(path: Path, sweep: mm.Sweep) -> None:
-    pol = sweep.pol_fraction
     with plt.rc_context(publication_style()):
-        fig, axes = plt.subplots(
-            1,
-            2,
-            figsize=(7.2, 3.0),
-            constrained_layout=True,
-            gridspec_kw={"width_ratios": (1.08, 1.0)},
-        )
+        fig, ax = plt.subplots(figsize=(4.2, 3.0), constrained_layout=True)
         colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
         plotted_modes = list(range(min(4, sweep.num_modes)))
         line_width = 2.025
 
         for mode_index in plotted_modes:
             x_smooth, y_smooth = smooth_line(sweep.values, sweep.n_eff[:, mode_index])
-            axes[0].plot(
+            ax.plot(
                 x_smooth,
                 y_smooth,
                 color=colors[mode_index],
                 linewidth=line_width,
                 label=f"mode {mode_index}",
             )
-        axes[0].set_xlabel("ridge width (um)")
-        axes[0].set_ylabel("effective index")
-        axes[0].grid(color="#d9dde3", linewidth=0.55)
-        axes[0].legend(ncol=2, frameon=False, handlelength=1.8, columnspacing=1.1)
+        ax.set_xlabel("ridge width (um)")
+        ax.set_ylabel("effective index")
+        ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
+        ax.margins(x=0)
+        ax.grid(color="#d9dde3", linewidth=0.55)
+        ax.legend(ncol=2, frameon=False, handlelength=1.8, columnspacing=1.1)
 
+        save_figure(fig, path)
+        plt.close(fig)
+
+
+def plot_te_fraction(path: Path, sweep: mm.Sweep) -> None:
+    pol = sweep.pol_fraction
+    with plt.rc_context(publication_style()):
+        fig, ax = plt.subplots(figsize=(4.2, 3.0), constrained_layout=True)
+        colors = [MODE_COLORS[index % len(MODE_COLORS)] for index in range(sweep.num_modes)]
+        line_width = 2.025
         highlighted = [index for index in (0, 1, 2, 3) if index < sweep.num_modes]
         if not highlighted:
             highlighted = [0]
         for mode_index in highlighted:
             x_smooth, y_smooth = smooth_line(sweep.values, pol["te"][:, mode_index], y_limits=(0.0, 1.0))
-            axes[1].plot(
+            ax.plot(
                 x_smooth,
                 y_smooth,
                 linewidth=line_width,
                 color=colors[mode_index],
                 label=f"mode {mode_index}",
             )
-        axes[1].set_xlabel("ridge width (um)")
-        axes[1].set_ylabel("TE fraction")
-        axes[1].set_ylim(-0.04, 1.04)
-        axes[1].grid(color="#d9dde3", linewidth=0.55)
-
-        for ax in axes:
-            ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
-            ax.margins(x=0)
+        ax.set_xlabel("ridge width (um)")
+        ax.set_ylabel("TE fraction")
+        ax.set_xlim(float(sweep.values[0]), float(sweep.values[-1]))
+        ax.set_ylim(-0.04, 1.04)
+        ax.margins(x=0)
+        ax.grid(color="#d9dde3", linewidth=0.55)
 
         mode_handles = [Line2D([0], [0], color=colors[index], lw=2.4) for index in highlighted]
-        axes[1].legend(
+        ax.legend(
             mode_handles,
             [f"mode {index}" for index in highlighted],
             frameon=False,

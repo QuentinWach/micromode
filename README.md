@@ -90,7 +90,7 @@ uv run --extra dev python examples/tidy3d_modal_sources_monitors.py
 The SOI hybridization example sweeps the width of a 220 nm silicon ridge and
 solves several modes at each step. It shows how nearby modes exchange character
 as the geometry changes by plotting effective index and TE fraction across the
-sweep, then rendering representative field profiles.
+sweep in separate figures, then rendering representative field profiles.
 
 ```bash
 uv run --extra dev python examples/soi_hybridization_sweep.py
