@@ -89,9 +89,7 @@ def solve_diagonal_scipy_reference(
     operators = _assemble_diagonal_operators(sparse, eps_tensor, mu_tensor, derivatives)
     operator = cast(Any, operators["mat"])
     eig_guess = complex(-(neff_guess * neff_guess), 0.0)
-    operator, arpack_initial_vector, arpack_guess = _real_arpack_problem_if_close(
-        operator, initial_vector, eig_guess
-    )
+    operator, arpack_initial_vector, arpack_guess = _real_arpack_problem_if_close(operator, initial_vector, eig_guess)
     values, vectors = _selected_eigenpairs(
         operator,
         num_modes=num_modes,

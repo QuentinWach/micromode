@@ -507,6 +507,7 @@ def _solve_one_frequency_scipy_tensorial(
         ),
     )
 
+
 def _transformed_material_tensors(
     eps: np.ndarray,
     mu: np.ndarray,

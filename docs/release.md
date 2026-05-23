@@ -63,7 +63,7 @@ python -m venv /tmp/micromode-testpypi
 4. Tag the release with the same version from `pyproject.toml`:
 
 ```bash
-git tag v0.1.0a3
+git tag v$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
 git push origin main --tags
 ```
 
