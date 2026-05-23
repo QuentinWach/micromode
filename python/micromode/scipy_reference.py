@@ -86,9 +86,10 @@ def solve_diagonal_scipy_reference(
         scale=float(derivative_scale),
     )
     operators = _assemble_diagonal_operators(sparse, eps_tensor, mu_tensor, derivatives)
+    operator = operators["mat"]
     eig_guess = complex(-(neff_guess * neff_guess), 0.0)
     values, vectors = _selected_eigenpairs(
-        operators["mat"],
+        operator,
         num_modes=num_modes,
         sigma=eig_guess,
         krylov_dim=krylov_dim,
@@ -98,7 +99,7 @@ def solve_diagonal_scipy_reference(
     )
     residuals = np.asarray(
         [
-            np.linalg.norm(operators["mat"] @ vectors[:, index] - values[index] * vectors[:, index])
+            np.linalg.norm(operator @ vectors[:, index] - values[index] * vectors[:, index])
             for index in range(len(values))
         ],
         dtype=float,
@@ -158,8 +159,8 @@ def solve_diagonal_scipy_reference(
         fields,
         {
             "backend": "scipy_arpack_reference",
-            "operator_size": int(operators["mat"].shape[0]),
-            "operator_nnz": int(operators["mat"].nnz),
+            "operator_size": int(operator.shape[0]),
+            "operator_nnz": int(operator.nnz),
             "residuals": np.asarray(sorted_residuals, dtype=float),
             "power_norms": orthogonalization["power_norms"],
             "lorentz_norms": orthogonalization["lorentz_norms"],
@@ -463,7 +464,7 @@ def _assemble_diagonal_operators(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
     )
     qmat = q_ep + q_partial
     mat = p_mu @ qmat + p_partial @ q_ep
-    return {"q_ep": q_ep, "qmat": qmat, "mat": mat}
+    return {"q_ep": _canonical_sparse(q_ep), "qmat": _canonical_sparse(qmat), "mat": _canonical_sparse(mat)}
 
 
 def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_mats):
@@ -512,15 +513,24 @@ def _assemble_tensorial_operator(sparse, eps: np.ndarray, mu: np.ndarray, der_ma
     bybx = -(dyb @ diag(mu_20_over_22)) + diag(eps_02_over_22) @ dyb
     byby = -(dyb @ diag(mu_21_over_22)) - diag(eps_02_over_22) @ dxb
 
-    return -1j * sparse.bmat(
-        [
-            [axax, axay, axbx, axby],
-            [ayax, ayay, aybx, ayby],
-            [bxax, bxay, bxbx, bxby],
-            [byax, byay, bybx, byby],
-        ],
-        format="csc",
+    return _canonical_sparse(
+        -1j
+        * sparse.bmat(
+            [
+                [axax, axay, axbx, axby],
+                [ayax, ayay, aybx, ayby],
+                [bxax, bxay, bxbx, bxby],
+                [byax, byay, bybx, byby],
+            ],
+            format="csc",
+        )
     )
+
+
+def _canonical_sparse(matrix):
+    matrix = matrix.tocsc(copy=True)
+    matrix.eliminate_zeros()
+    return matrix
 
 
 def _selected_eigenpairs(
