@@ -29,14 +29,18 @@ PRESETS = {
         BenchmarkCase("strip_60x40", "SOI strip waveguide, coarse", 60, 40, krylov_dim=48),
         BenchmarkCase("strip_120x80", "SOI strip waveguide", 120, 80, krylov_dim=48),
         BenchmarkCase("strip_pml_120x80", "SOI strip waveguide with mode PML", 120, 80, krylov_dim=48, num_pml=(8, 8)),
-        BenchmarkCase("slot_120x80", "Silicon slot waveguide", 120, 80, krylov_dim=48, problem="slot"),
+        BenchmarkCase(
+            "slot_120x80", "Silicon slot waveguide, fundamental", 120, 80, num_modes=1, krylov_dim=48, problem="slot"
+        ),
     ),
     "large": (
         BenchmarkCase("strip_60x40", "SOI strip waveguide, coarse", 60, 40, krylov_dim=48),
         BenchmarkCase("strip_120x80", "SOI strip waveguide", 120, 80, krylov_dim=48),
         BenchmarkCase("strip_240x160", "SOI strip waveguide, large", 240, 160, krylov_dim=64),
         BenchmarkCase("strip_480x320", "SOI strip waveguide, very large", 480, 320, krylov_dim=64),
-        BenchmarkCase("slot_120x80", "Silicon slot waveguide", 120, 80, krylov_dim=48, problem="slot"),
+        BenchmarkCase(
+            "slot_120x80", "Silicon slot waveguide, fundamental", 120, 80, num_modes=1, krylov_dim=48, problem="slot"
+        ),
     ),
 }
 
@@ -51,7 +55,7 @@ N_AIR = 1.0
 def main() -> None:
     args = parse_args()
     cases = list(PRESETS[args.preset])
-    rows = [run_case(case) for case in cases]
+    rows = [run_case(case, profile_source=args.profile_source) for case in cases]
     print(markdown_table(rows))
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -62,21 +66,33 @@ def main() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compare MicroMode Rust, MicroMode SciPy, and Tidy3D local solves.")
     parser.add_argument("--preset", choices=tuple(PRESETS), default="quick")
+    parser.add_argument(
+        "--profile-source",
+        choices=("tidy3d", "analytic"),
+        default="tidy3d",
+        help="Use Tidy3D's exact local solver grid/epsilon profile, or MicroMode's independent analytic raster.",
+    )
     parser.add_argument("--output", type=Path, default=Path("tmp/tidy3d_backend_benchmark.json"))
     return parser.parse_args()
 
 
-def run_case(case: BenchmarkCase) -> dict[str, object]:
-    materials = micromode_materials(case)
+def run_case(case: BenchmarkCase, *, profile_source: str) -> dict[str, object]:
+    tidy3d_solver = make_tidy3d_solver(case)
+    materials = (
+        micromode_materials_from_tidy3d_solver(tidy3d_solver, case)
+        if profile_source == "tidy3d"
+        else micromode_materials(case)
+    )
     row: dict[str, object] = {
         "case_id": case.case_id,
         "description": case.description,
         "grid": f"{case.ny}x{case.nz}",
         "cells": case.ny * case.nz,
+        "profile_source": profile_source,
     }
     rust_seconds, rust_neff = time_micromode(case, materials, backend="rust")
     scipy_seconds, scipy_neff = time_micromode(case, materials, backend="scipy-reference")
-    tidy3d_seconds, tidy3d_neff = time_tidy3d(case)
+    tidy3d_seconds, tidy3d_neff = time_tidy3d(tidy3d_solver)
 
     row.update(
         {
@@ -113,7 +129,13 @@ def time_micromode(case: BenchmarkCase, materials: mm.Materials, *, backend: str
     return time.perf_counter() - start, np.asarray(data.n_eff.values[0], dtype=float)
 
 
-def time_tidy3d(case: BenchmarkCase) -> tuple[float, np.ndarray]:
+def time_tidy3d(solver) -> tuple[float, np.ndarray]:
+    start = time.perf_counter()
+    data = solver.solve()
+    return time.perf_counter() - start, np.asarray(data.n_eff.values[0], dtype=float)
+
+
+def make_tidy3d_solver(case: BenchmarkCase):
     try:
         import tidy3d as td
         from tidy3d.plugins.mode import ModeSolver
@@ -137,9 +159,32 @@ def time_tidy3d(case: BenchmarkCase) -> tuple[float, np.ndarray]:
         mode_spec=td.ModeSpec(num_modes=case.num_modes, target_neff=case.target_neff, num_pml=case.num_pml),
         freqs=[freq],
     )
-    start = time.perf_counter()
-    data = solver.solve()
-    return time.perf_counter() - start, np.asarray(data.n_eff.values[0], dtype=float)
+    return solver
+
+
+def micromode_materials_from_tidy3d_solver(solver, case: BenchmarkCase) -> mm.Materials:
+    eps = np.asarray(solver._solver_eps(tidy3d_frequency()), dtype=np.complex128)
+    grid = solver._solver_grid
+    return mm.Materials.from_components(
+        x_edges=np.asarray(grid.boundaries.y, dtype=float),
+        y_edges=np.asarray(grid.boundaries.z, dtype=float),
+        normal_axis=2,
+        eps_xx=eps[0],
+        eps_xy=eps[1],
+        eps_xz=eps[2],
+        eps_yx=eps[3],
+        eps_yy=eps[4],
+        eps_yz=eps[5],
+        eps_zx=eps[6],
+        eps_zy=eps[7],
+        eps_zz=eps[8],
+    )
+
+
+def tidy3d_frequency() -> float:
+    import tidy3d as td
+
+    return float(td.C_0 / WAVELENGTH_UM)
 
 
 def micromode_materials(case: BenchmarkCase) -> mm.Materials:
