@@ -21,8 +21,9 @@ the mode plane:
 uv run python benchmarks/compare_mode_solver_fixtures.py --suite extended --run-local --report-json tmp/reference_fixture_validation_rust_sparse.json
 ```
 
-Local fixture validation uses the Rust sparse backend by default. To run the same reconstructable
-fixture recipes through the SciPy reference backend:
+This benchmark harness defaults to the Rust sparse backend so historical
+fixture runs stay comparable. To run the same reconstructable fixture recipes
+through the package's preferred SciPy backend:
 
 ```bash
 uv run --extra scipy python benchmarks/compare_mode_solver_fixtures.py \

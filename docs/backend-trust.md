@@ -2,14 +2,15 @@
 
 MicroMode has two backend roles:
 
-- The Rust backend is the production solver. It is fast, portable, and does not
-  require users to install ARPACK, SuiteSparse, BLAS/LAPACK bindings, or a
-  Fortran toolchain.
-- The SciPy reference backend is an optional audit path. It mirrors the sparse
-  operators in Python and calls SciPy/ARPACK so the core numerical method can be
-  inspected by users who are more comfortable reading Python.
+- The SciPy backend is the preferred default when SciPy is installed. It
+  assembles the sparse operators in Python and calls SciPy/ARPACK so the core
+  numerical method can be inspected by users who are more comfortable reading
+  Python.
+- The Rust backend is an optional portable fallback. It does not require users
+  to install ARPACK, SuiteSparse, BLAS/LAPACK bindings, or a Fortran toolchain.
 
-The SciPy backend is selected explicitly:
+The public APIs default to `backend="auto"`, which selects SciPy when available
+and falls back to Rust otherwise. A backend can also be selected explicitly:
 
 ```python
 import micromode as mm
@@ -21,11 +22,12 @@ data = mm.solve_grid(
     freqs=[freq],
     num_modes=2,
     target_neff=2.5,
-    backend="scipy-reference",
+    backend="scipy",
 )
 ```
 
-Install the optional dependency with:
+`backend="scipy-reference"` is kept as a compatibility alias for the same SciPy
+path. Install the recommended SciPy dependency with:
 
 ```bash
 pip install "micromode[scipy]"
@@ -33,7 +35,7 @@ pip install "micromode[scipy]"
 
 ## Supported Scope
 
-The reference backend covers the same core solve families as Rust:
+The SciPy backend covers the same core solve families as Rust:
 
 - diagonal scalar or diagonal-anisotropic material grids,
 - full tensor material grids,
@@ -43,8 +45,8 @@ The reference backend covers the same core solve families as Rust:
   grids before backend dispatch.
 
 The remaining difference is operational rather than mathematical: the SciPy
-backend depends on SciPy/ARPACK and is expected to be slower and less portable
-than the Rust backend.
+backend depends on SciPy/ARPACK, while the Rust backend is self-contained and
+can be selected with `backend="rust"` for deployments that need that property.
 
 ## What Is Compared
 
@@ -64,8 +66,8 @@ Run the focused cross-backend check with:
 uv run --extra scipy pytest tests/test_micromode_api.py -k scipy_reference
 ```
 
-Without the SciPy extra installed, the comparison test is skipped and the Rust
-production tests still run.
+Without the SciPy extra installed, the comparison test is skipped and the
+default `backend="auto"` path falls back to Rust.
 
 ## Reading The Code
 
@@ -79,9 +81,9 @@ The relevant files are:
 - `src/mode_solver.rs`: Rust field reconstruction, normalization, and Lorentz
   orthogonalization.
 
-The intended trust chain is: inspect the Python reference, inspect the Rust
-operator comments, then run the cross-backend test to verify that Rust and SciPy
-agree on the supported cases.
+The intended trust chain is: inspect the Python/SciPy implementation first, then
+run the cross-backend tests to verify that Rust and SciPy agree on the supported
+cases where the optional Rust backend matters.
 
 ## External References
 

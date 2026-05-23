@@ -1,9 +1,9 @@
-"""Readable SciPy reference implementation for the diagonal mode solver.
+"""Readable SciPy implementation for the mode solver.
 
-This module intentionally mirrors the Rust sparse mode-solver paths in plain
-Python/SciPy. It is slower and less portable than the production backend, but it
-keeps the numerical contract inspectable by users who want to audit the
-finite-difference operators against SciPy/ARPACK.
+This module assembles the sparse mode-solver paths in plain Python/SciPy. It is
+the preferred backend when SciPy is installed because it keeps the numerical
+contract inspectable by users who want to audit the finite-difference operators
+against SciPy/ARPACK.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ def solve_diagonal_scipy_reference(
     """Solve the diagonal sparse eigenproblem with SciPy/ARPACK.
 
     This is the same reduced ``[Ex, Ey]`` transverse eigenproblem used by the
-    Rust production backend for diagonal material tensors.
+    Rust backend for diagonal material tensors.
     """
 
     sparse, spla, scipy_linalg = _import_scipy()
@@ -300,7 +300,7 @@ def _import_scipy():
         import scipy.sparse as sparse
         import scipy.sparse.linalg as spla
     except ImportError as exc:  # pragma: no cover - depends on optional extra.
-        raise ImportError("the SciPy reference backend requires `pip install micromode[scipy]`") from exc
+        raise ImportError("the SciPy backend requires `pip install micromode[scipy]`") from exc
     return sparse, spla, scipy_linalg
 
 

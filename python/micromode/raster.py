@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import Sequence
 from typing import Literal, cast
 
@@ -14,7 +15,8 @@ from .result import Result
 from .scipy_reference import solve_diagonal_scipy_reference, solve_tensorial_scipy_reference
 
 _COMPONENTS = ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz")
-Backend = Literal["rust", "scipy-reference"]
+Backend = Literal["auto", "scipy", "scipy-reference", "rust"]
+_ResolvedBackend = Literal["scipy-reference", "rust"]
 
 
 def solve_grid(
@@ -54,7 +56,7 @@ def solve_grid(
     angle_phi: float = 0.0,
     bend_radius: float | None = None,
     bend_axis: Literal[0, 1] = 0,
-    backend: Backend = "rust",
+    backend: Backend = "auto",
     spec: Spec | None = None,
 ) -> Result:
     """Solve modes from rasterized material components and grid edges.
@@ -146,15 +148,15 @@ def solve_slice(
     angle_phi: float = 0.0,
     bend_radius: float | None = None,
     bend_axis: Literal[0, 1] = 0,
-    backend: Backend = "rust",
+    backend: Backend = "auto",
     spec: Spec | None = None,
 ) -> Result:
     """Solve modes from a one-dimensional mode-plane material slice.
 
     This is the convenience API for 2D FDTD simulations. The supplied material
     arrays vary along one mode-plane axis and MicroMode inserts a single
-    invariant cell along the other axis before using the same Rust sparse solve
-    path as ``solve_modes``.
+    invariant cell along the other axis before using the same backend solve path
+    as ``solve_modes``.
     """
 
     material_grid = Materials.from_slice(
@@ -219,18 +221,20 @@ def solve_modes(
     angle_phi: float = 0.0,
     bend_radius: float | None = None,
     bend_axis: Literal[0, 1] = 0,
-    backend: Backend = "rust",
+    backend: Backend = "auto",
     spec: Spec | None = None,
 ) -> Result:
     """Solve modes for an already-rasterized material tensor grid.
 
     This is the preferred Beamz integration point. Beamz owns geometry and
     material rasterization; MicroMode owns the sparse mode solve and field
-    reconstruction on the supplied grid.
+    reconstruction on the supplied grid. By default, MicroMode uses the
+    Python/SciPy backend when SciPy is installed and falls back to the Rust
+    backend otherwise.
     """
-    # Main Python-to-Rust orchestration layer. It validates user-facing grid
-    # objects, solves one frequency at a time, then wraps flattened Rust outputs
-    # back into coordinate-aware xarray arrays.
+    # Main solver orchestration layer. It validates user-facing grid objects,
+    # solves one frequency at a time, then wraps flattened backend outputs into
+    # coordinate-aware xarray arrays.
     if not isinstance(material_grid, Materials):
         raise TypeError("material_grid must be a Materials")
     shape = material_grid.shape
@@ -252,8 +256,7 @@ def solve_modes(
         raise ValueError("num_modes must be positive")
     if direction not in {"+", "-"}:
         raise ValueError("direction must be '+' or '-'")
-    if backend not in {"rust", "scipy-reference"}:
-        raise ValueError("backend must be 'rust' or 'scipy-reference'")
+    backend = _resolve_backend(backend)
     pml_spec = _resolve_pml_spec(pml)
     boundary_spec = _resolve_boundary_spec(boundary)
     if bend_radius is not None and np.isclose(bend_radius, 0.0):
@@ -288,9 +291,9 @@ def solve_modes(
             backend=backend,
             material_grid=material_grid,
         )
-        # Rust solves in local coordinates where local z is the propagation
-        # normal. Convert field labels back to the global x/y/z axes requested by
-        # the material grid before exposing them.
+        # Backends solve in local coordinates where local z is the propagation
+        # normal. Convert field labels back to the global x/y/z axes requested
+        # by the material grid before exposing them.
         fields = _local_fields_to_global(fields, normal_axis=material_grid.grid.normal_axis)
         n_rows.append(n_complex)
         solver_runs.append(solver_info)
@@ -337,7 +340,7 @@ def _solve_one_frequency(
     angle_phi: float,
     bend_radius: float | None,
     bend_axis: int,
-    backend: Backend,
+    backend: _ResolvedBackend,
 ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, object]]:
     # Forward and backward spacings represent the local Yee grid. The derivative
     # builders need both because E and H components are staggered.
@@ -452,7 +455,7 @@ def _solve_one_frequency(
             krylov_dim=krylov_dim,
             boundary_spec=boundary_spec,
         )
-    # Ordinary scalar/diagonal grids use the production diagonal sparse backend.
+    # Ordinary scalar/diagonal grids use the diagonal sparse formulation.
     if backend == "scipy-reference":
         return _solve_one_frequency_scipy_reference(
             eps_tensor=eps_tensor,
@@ -681,7 +684,7 @@ def _transformed_material_tensors(
     #   eps' = J eps J.T / det(J)
     #   mu'  = J mu  J.T / det(J)
     # Angle and bend solves are handled by changing material tensors, then
-    # passing the resulting grid to the same Rust tensorial operator.
+    # passing the resulting grid to the same tensorial operator family.
     if eps.shape != mu.shape or eps.shape[:2] != (3, 3):
         raise ValueError("eps and mu tensors must both have shape (3, 3, nx, ny)")
     nx, ny = eps.shape[2:]
@@ -753,6 +756,20 @@ def _resolve_boundary_spec(
     return BoundarySpec(low=cast(tuple[BoundaryCondition, BoundaryCondition], boundary))
 
 
+def _resolve_backend(backend: Backend) -> _ResolvedBackend:
+    if backend == "auto":
+        return "scipy-reference" if _scipy_available() else "rust"
+    if backend == "scipy":
+        return "scipy-reference"
+    if backend in {"scipy-reference", "rust"}:
+        return backend
+    raise ValueError("backend must be 'auto', 'scipy', 'scipy-reference', or 'rust'")
+
+
+def _scipy_available() -> bool:
+    return importlib.util.find_spec("scipy") is not None
+
+
 def _solver_info_with_context(
     solver_info: dict[str, object],
     *,
@@ -760,8 +777,8 @@ def _solver_info_with_context(
     shape: tuple[int, int],
     krylov_dim: int,
 ) -> dict[str, object]:
-    # Rust reports backend-local data. Add enough Python-side context for saved
-    # Result files and benchmark reports to be self-describing.
+    # Backends report backend-local data. Add enough Python-side context for
+    # saved Result files and benchmark reports to be self-describing.
     out = dict(solver_info)
     out["backend_kind"] = backend_kind
     out["shape"] = shape

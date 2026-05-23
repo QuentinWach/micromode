@@ -1,9 +1,9 @@
 # micromode
 
-An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, written in native **[Rust](https://rust-lang.org/)**.
+An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**, with a readable **SciPy/ARPACK** backend and an optional native **[Rust](https://rust-lang.org/)** backend.
 
 ```bash
-pip install micromode
+pip install "micromode[scipy]"
 ```
 
 [![License](https://img.shields.io/github/license/QuentinWach/micromode)](LICENSE)
@@ -16,8 +16,10 @@ pip install micromode
 ## Why Use It?
 
 - **Grid-first API**: pass arrays directly, with no required geometry model.
-- **Fast**, portable Rust sparse backend: one production solve path.
-- **Auditable** optional SciPy reference backend for cross-checking solves.
+- **Auditable SciPy default**: sparse operators are assembled in Python and
+  solved with SciPy/ARPACK when SciPy is installed.
+- **Optional Rust backend**: a portable native fallback for environments that do
+  not want a SciPy dependency.
 - **Practical** outputs: fields, `n_eff`, `k_eff`, mode area, polarization fractions,
   Lorentz overlaps, plotting, dataframe export, and HDF5 save/load.
 - **Tensor-aware**: supports scalar, diagonal anisotropic, and full tensor material
@@ -98,47 +100,32 @@ the public solver controls are summarized in [docs/mode-solver-methods.md](docs/
 
 ## Solver
 
-MicroMode is designed to make high-performance mode solving available without
-requiring users to install external solver stacks. The production backend is a
-**portable Rust [sparse](https://en.wikipedia.org/wiki/Sparse_matrix)
-[shift-invert](https://en.wikipedia.org/wiki/Preconditioner#Spectral_transformation)
-[eigensolver](https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors)**, so
-source installs and wheels do **not** depend on
-[ARPACK](https://en.wikipedia.org/wiki/ARPACK),
-[UMFPACK](https://en.wikipedia.org/wiki/UMFPACK),
-[SuiteSparse](https://en.wikipedia.org/wiki/SuiteSparse),
-[BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms)/
-[LAPACK](https://en.wikipedia.org/wiki/LAPACK), or a Fortran compiler.
-That matters for simulation workflows that need to run in CI, notebooks,
-container images, FDTD plugins, and cross-platform design tools.
+MicroMode defaults to a Python/SciPy backend when SciPy is installed. This path
+assembles the finite-difference sparse operators in Python and solves the
+shift-invert eigenproblems with
+[SciPy/ARPACK](https://docs.scipy.org/doc/scipy/reference/sparse.linalg.html).
+That makes the numerical method easier for academic users to inspect and
+debug, while still using a trusted sparse eigensolver stack.
 
-The native solver is **not a dense fallback**. It uses
-[sparse](https://en.wikipedia.org/wiki/Sparse_matrix)
-[finite-difference](https://en.wikipedia.org/wiki/Finite_difference_method)
-operators throughout, applies
-[AMD fill-reducing ordering](https://en.wikipedia.org/wiki/Minimum_degree_algorithm)
-before sparse [LU factorization](https://en.wikipedia.org/wiki/LU_decomposition),
-stores LU factors in a packed format for repeated triangular solves, and runs an
-[Arnoldi iteration](https://en.wikipedia.org/wiki/Arnoldi_iteration) targeted
-around the requested effective index. The Arnoldi stage uses
-**shift-invert**, adaptive
-[Ritz-pair](https://en.wikipedia.org/wiki/Ritz_method) checkpointing, early
-stopping once requested modes are stable, and selective Ritz vector
-reconstruction so work is spent on the modes that will actually be returned.
-
-For users who want an executable Python reference, MicroMode also provides an
-optional SciPy/ARPACK backend:
+The recommended install includes SciPy:
 
 ```bash
 pip install "micromode[scipy]"
 ```
 
+The public APIs use `backend="auto"` by default. In auto mode MicroMode selects
+SciPy when available and falls back to Rust otherwise. You can also choose a
+backend explicitly:
+
 ```python
-data = mm.solve_modes(..., backend="scipy-reference")
+data = mm.solve_modes(..., backend="scipy")  # same as backend="scipy-reference"
+data = mm.solve_modes(..., backend="rust")
 ```
 
-This backend is intentionally slower than Rust. Its purpose is to make the core
-eigenproblems easy to inspect in Python and to validate that the production Rust
-backend returns the same effective indices and normalization diagnostics on
-supported cases. See
+The Rust backend remains useful when a deployment needs a self-contained native
+solver with no SciPy, ARPACK, BLAS/LAPACK, or Fortran toolchain requirement. It
+uses sparse finite-difference operators, AMD fill-reducing ordering, sparse LU
+factorization, and a shift-invert Arnoldi iteration. The SciPy and Rust paths
+are compared in tests so their effective indices and normalization diagnostics
+stay aligned on supported cases. See
 [docs/backend-trust.md](docs/backend-trust.md).

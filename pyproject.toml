@@ -1,7 +1,7 @@
 [project]
 name = "micromode"
 version = "0.1.0a4"
-description = "Rust-backed photonics mode solver with a small Python API."
+description = "SciPy-first photonics mode solver with an optional Rust backend."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = "Apache-2.0"

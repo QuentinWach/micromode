@@ -30,11 +30,14 @@ coordinate-aware `Result`.
 - `krylov_dim`: dimension of the Arnoldi search space.
 - `angle_theta`, `angle_phi`, `bend_radius`, `bend_axis`: transformation-optics
   controls that update \(\epsilon\) and \(\mu\) before the sparse solve.
+- `backend`: `"auto"` by default, choosing SciPy when installed and Rust
+  otherwise. Use `"scipy"` or `"scipy-reference"` for the Python/SciPy path and
+  `"rust"` for the optional native backend.
 
 ## Eigenpair Selection
 
-The production Rust backend selects eigenpairs with sparse shift-invert Arnoldi
-[1, 2].
+The default SciPy backend selects eigenpairs with sparse shift-invert
+SciPy/ARPACK [1, 2].
 For a matrix \(A\) and shift \(\sigma\), Arnoldi is applied to
 
 $$
@@ -47,10 +50,11 @@ where \(\theta\) is a Ritz value of the inverse-shifted operator. The diagonal
 backend uses \(\sigma=-\texttt{target_neff}^2\); the tensorial backend uses
 \(\sigma=\texttt{target_neff}\).
 
-The optional `backend="scipy-reference"` path assembles the same diagonal or
-tensorial sparse operator in Python and solves it with SciPy/ARPACK. It exists
-as a readable validation backend, not as the default production solver. Install
-it with `micromode[scipy]`.
+The optional `backend="rust"` path assembles the same diagonal or tensorial
+sparse operator through the native extension and solves it with MicroMode's
+portable shift-invert Arnoldi implementation. It exists for deployments that do
+not want a SciPy dependency and as a cross-check against the Python/SciPy path.
+Install the recommended default SciPy dependency with `micromode[scipy]`.
 
 Returned modes are sorted by decreasing real effective index, normalized to
 unit transverse power,
