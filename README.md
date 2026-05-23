@@ -1,6 +1,8 @@
 # micromode
 
 An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**.
+MicroMode is a transparent, grid-first SciPy mode solver for rasterized
+photonics workflows.
 
 ```bash
 pip install micromode
@@ -15,16 +17,25 @@ pip install micromode
 
 ## Why Use It?
 
-- **Grid-first API**: pass arrays directly, with no required geometry model.
-- **Auditable SciPy solver**: sparse operators are assembled in Python and
-  solved with SciPy/ARPACK.
-- **Practical** outputs: fields, `n_eff`, `k_eff`, mode area, polarization fractions,
-  Lorentz overlaps, plotting, dataframe export, and HDF5 save/load.
+- **Grid-first API**: pass already-rasterized material tensors and grid edges
+  directly, with no required CAD or geometry model.
+- **Readable SciPy implementation**: sparse operators are assembled in Python
+  and solved with SciPy/ARPACK, so the numerical path can be inspected by users
+  who do not want to trust a custom native solver.
+- **Small integration surface**: MicroMode is the solver piece you embed after
+  geometry has already been rasterized by an FDTD, FEM, or custom photonics
+  pipeline.
 - **Tensor-aware**: supports scalar, diagonal anisotropic, and full tensor material
-  grids.
+  grids, plus transformed angle and bend solves.
+- **Practical outputs**: coordinate-aware fields, `n_eff`, `k_eff`, mode area,
+  polarization fractions, Lorentz overlaps, plotting, dataframe export, and
+  HDF5 save/load.
 - Works for both **2D cross sections and 1D slices**.
 
-You give it a material grid. It returns guided modes: effective indices, six-component fields, polarization metrics, mode area, overlaps, diagnostics, plots, and HDF5 output. MicroMode is intentionally not a CAD or geometry package. It is the solver piece you use after geometry has already been rasterized onto a mode-plane grid.
+MicroMode is intentionally not a full simulation platform or geometry package.
+That is the point: you give it a mode-plane material grid, and it returns guided
+modes with the diagnostics and result helpers needed by downstream simulation
+workflows.
 
 _Micromode is the **default mode solver** in the [BEAMZ FDTD engine](https://github.com/beamzorg/beamz)._
 
@@ -103,3 +114,8 @@ the shift-invert eigenproblems with
 [SciPy/ARPACK](https://docs.scipy.org/doc/scipy/reference/sparse.linalg.html).
 That makes the numerical method easier for academic users to inspect and
 debug, while still using a trusted sparse eigensolver stack.
+
+This means MicroMode is differentiated by workflow and inspectability rather
+than by a custom solver engine: it is built for users who already have
+permittivity on a Yee grid and want a focused, auditable mode-solver component
+that fits cleanly into a larger photonics pipeline.
