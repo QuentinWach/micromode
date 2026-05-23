@@ -664,7 +664,7 @@ def _real_arpack_problem_if_close(matrix, initial_vector: np.ndarray | None, gue
     # If the complex part is numerical noise, cast to real to avoid SciPy's
     # ComplexWarning path and improve reproducibility.
     if np.max(np.abs(matrix_imag)) <= 1e-14 * matrix_scale and guess_is_real:
-        real_vector = None if initial_vector is None else np.asarray(initial_vector.real, dtype=float)
+        real_vector = None if initial_vector is None else np.asarray(np.real(initial_vector), dtype=float)
         return matrix.real.astype(float), real_vector, float(guess.real)
     return matrix, initial_vector, guess
 

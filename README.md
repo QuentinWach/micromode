@@ -1,8 +1,6 @@
 # micromode
 
 An **electromagnetic mode solver** using the **[FDFD method](https://en.wikipedia.org/wiki/Finite-difference_frequency-domain_method)** on a **[rectilinear Yee-grid](https://en.wikipedia.org/wiki/Finite-difference_time-domain_method)**.
-MicroMode is a transparent, grid-first SciPy mode solver for rasterized
-photonics workflows.
 
 ```bash
 pip install micromode
